@@ -89,7 +89,7 @@ export default function Hero({ current, book, onReschedule, onFinish, onUnpin }:
       <div className="hero-title">{book.title}</div>
       <div className="hero-author">{book.author || "Unknown"}</div>
       {days !== null && current?.meetingDate ? (
-        <div className="countdown-block">
+        <div className="countdown-block" suppressHydrationWarning>
           <div className={`countdown-num ${numClass}`}>{days === 0 ? "0" : Math.abs(days)}</div>
           <div className="countdown-side">
             <div className="countdown-label">

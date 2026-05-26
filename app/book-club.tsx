@@ -1,97 +1,55 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import AddModal from "./add-modal";
 import BookList from "./book-list";
 import Hero from "./hero";
 import PinModal, { type PinTarget } from "./pin-modal";
 import { PlusIcon } from "./icons";
 import type { Book, CurrentReading, Filter } from "@/lib/types";
-import { uid } from "@/lib/uid";
+import { createClient } from "@/lib/supabase/client";
+import {
+  clearCurrent,
+  deleteBook,
+  insertBook,
+  updateBookRead,
+  upsertCurrent,
+} from "@/lib/api";
 
-function seed(): { books: Book[]; current: CurrentReading } {
-  const meeting = new Date();
-  meeting.setDate(meeting.getDate() + 18);
-  const books: Book[] = [
-    {
-      id: uid(),
-      title: "The Master and Margarita",
-      author: "Mikhail Bulgakov",
-      suggestedBy: "Louna",
-      read: false,
-      addedAt: Date.now() - 5000,
-    },
-    {
-      id: uid(),
-      title: "Tomorrow, and Tomorrow, and Tomorrow",
-      author: "Gabrielle Zevin",
-      suggestedBy: "Marc",
-      read: false,
-      addedAt: Date.now() - 4000,
-    },
-    {
-      id: uid(),
-      title: "Klara and the Sun",
-      author: "Kazuo Ishiguro",
-      suggestedBy: "Sofia",
-      read: false,
-      addedAt: Date.now() - 3000,
-    },
-    {
-      id: uid(),
-      title: "The Wind-Up Bird Chronicle",
-      author: "Haruki Murakami",
-      suggestedBy: "Diego",
-      read: false,
-      addedAt: Date.now() - 2000,
-    },
-    {
-      id: uid(),
-      title: "Pachinko",
-      author: "Min Jin Lee",
-      suggestedBy: "Elena",
-      read: true,
-      addedAt: Date.now() - 10000,
-    },
-  ];
-  return {
-    books,
-    current: { bookId: books[0].id, meetingDate: meeting.toISOString().slice(0, 10) },
-  };
-}
+type Props = {
+  initialBooks: Book[];
+  initialCurrent: CurrentReading | null;
+};
 
-export default function BookClub() {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [current, setCurrent] = useState<CurrentReading | null>(null);
+export default function BookClub({ initialBooks, initialCurrent }: Props) {
+  const [books, setBooks] = useState<Book[]>(initialBooks);
+  const [current, setCurrent] = useState<CurrentReading | null>(initialCurrent);
   const [filter, setFilter] = useState<Filter>("available");
   const [addOpen, setAddOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  // Seed on first mount to keep dates client-only (avoids hydration mismatch).
-  useEffect(() => {
-    const s = seed();
-    setBooks(s.books);
-    setCurrent(s.current);
-    setMounted(true);
-  }, []);
+  const supabase = useMemo(() => createClient(), []);
 
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
 
-  function addBook(data: { title: string; author: string; suggestedBy: string }) {
-    setBooks((prev) => [
-      ...prev,
-      {
-        id: uid(),
-        title: data.title,
-        author: data.author || null,
-        suggestedBy: data.suggestedBy || null,
-        read: false,
-        addedAt: Date.now(),
-      },
-    ]);
+  async function addBook(data: { title: string; author: string; suggestedBy: string }) {
+    const book: Book = {
+      id: crypto.randomUUID(),
+      title: data.title,
+      author: data.author || null,
+      suggestedBy: data.suggestedBy || null,
+      read: false,
+      addedAt: Date.now(),
+    };
+    setBooks((prev) => [book, ...prev]);
     setAddOpen(false);
+    try {
+      await insertBook(supabase, book);
+    } catch (e) {
+      console.error("Failed to add book", e);
+      setBooks((prev) => prev.filter((b) => b.id !== book.id));
+    }
   }
 
   function openPin(bookId: string) {
@@ -109,48 +67,77 @@ export default function BookClub() {
     });
   }
 
-  function confirmPin(date: string) {
+  async function confirmPin(date: string) {
     if (!pinTarget) return;
-    if (pinTarget.mode === "reschedule") {
-      setCurrent((c) => (c ? { ...c, meetingDate: date } : c));
-    } else {
-      setCurrent({ bookId: pinTarget.bookId, meetingDate: date });
-    }
+    const prev = current;
+    const next: CurrentReading =
+      pinTarget.mode === "reschedule"
+        ? { bookId: current!.bookId, meetingDate: date }
+        : { bookId: pinTarget.bookId, meetingDate: date };
+    setCurrent(next);
     setPinTarget(null);
+    try {
+      await upsertCurrent(supabase, next);
+    } catch (e) {
+      console.error("Failed to update current reading", e);
+      setCurrent(prev);
+    }
   }
 
-  function finishCurrent() {
+  async function finishCurrent() {
     if (!current) return;
-    setBooks((prev) => prev.map((b) => (b.id === current.bookId ? { ...b, read: true } : b)));
+    const id = current.bookId;
+    const prevCurrent = current;
+    const prevBooks = books;
+    setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, read: true } : b)));
     setCurrent(null);
+    try {
+      await clearCurrent(supabase);
+      await updateBookRead(supabase, id, true);
+    } catch (e) {
+      console.error("Failed to finish current book", e);
+      setBooks(prevBooks);
+      setCurrent(prevCurrent);
+    }
   }
 
-  function unpin() {
+  async function unpin() {
+    const prev = current;
     setCurrent(null);
+    try {
+      await clearCurrent(supabase);
+    } catch (e) {
+      console.error("Failed to unpin", e);
+      setCurrent(prev);
+    }
   }
 
-  function toggleRead(id: string) {
-    setBooks((prev) => prev.map((b) => (b.id === id ? { ...b, read: !b.read } : b)));
+  async function toggleRead(id: string) {
+    const book = books.find((b) => b.id === id);
+    if (!book) return;
+    const next = !book.read;
+    setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, read: next } : b)));
+    try {
+      await updateBookRead(supabase, id, next);
+    } catch (e) {
+      console.error("Failed to toggle read", e);
+      setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, read: !next } : b)));
+    }
   }
 
-  function removeBook(id: string) {
+  async function removeBook(id: string) {
     if (!confirm("Remove this book from the list?")) return;
-    setBooks((prev) => prev.filter((b) => b.id !== id));
-    setCurrent((c) => (c?.bookId === id ? null : c));
-  }
-
-  // Don't render until seed is set — keeps initial server HTML and first client paint identical (an empty container).
-  if (!mounted) {
-    return (
-      <div className="container">
-        <header>
-          <div className="logo">
-            <span className="dot" />
-            Book Club
-          </div>
-        </header>
-      </div>
-    );
+    const prevBooks = books;
+    const prevCurrent = current;
+    setBooks((bs) => bs.filter((b) => b.id !== id));
+    if (current?.bookId === id) setCurrent(null);
+    try {
+      await deleteBook(supabase, id);
+    } catch (e) {
+      console.error("Failed to remove book", e);
+      setBooks(prevBooks);
+      setCurrent(prevCurrent);
+    }
   }
 
   return (
