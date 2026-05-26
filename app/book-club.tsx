@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AddModal from "./add-modal";
 import BookList from "./book-list";
 import Hero from "./hero";
+import InstallPrompt from "./install-prompt";
 import PinModal, { type PinTarget } from "./pin-modal";
 import { PlusIcon } from "./icons";
 import type { Book, CurrentReading, Filter } from "@/lib/types";
@@ -224,6 +225,7 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
 
       <AddModal open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addBook} />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
+      <InstallPrompt />
     </>
   );
 }

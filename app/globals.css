@@ -562,6 +562,102 @@ header {
   padding: 14px;
 }
 
+/* Install prompt */
+.install-backdrop {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.install-sheet {
+  padding: 14px 22px 26px;
+}
+.install-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.install-label::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: var(--accent);
+}
+.install-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variation-settings: "wdth" 85, "opsz" 36;
+  text-transform: uppercase;
+  line-height: 0.95;
+  margin-bottom: 12px;
+}
+.install-intro {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin-bottom: 26px;
+  line-height: 1.45;
+}
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+.install-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.install-step-num {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-variation-settings: "wdth" 85;
+  color: var(--text-soft);
+}
+.install-step-text {
+  flex: 1;
+  padding-top: 5px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+}
+.install-step-text b {
+  font-weight: 700;
+}
+.install-icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  vertical-align: middle;
+  margin: 0 2px;
+  color: var(--text);
+}
+.install-icon-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.install-cta {
+  width: 100%;
+  padding: 16px;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;
