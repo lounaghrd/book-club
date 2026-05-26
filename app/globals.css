@@ -458,6 +458,7 @@ header {
   transition: all 0.18s;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 .fab:hover {
   background: var(--accent-deep);
