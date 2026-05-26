@@ -1,17 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AddModal from "./add-modal";
 import BookList from "./book-list";
 import Hero from "./hero";
 import PinModal, { type PinTarget } from "./pin-modal";
 import { PlusIcon } from "./icons";
 import type { Book, CurrentReading, Filter } from "@/lib/types";
+import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
+import { CLUB_ID } from "@/lib/config";
+
+type BookRow = Database["public"]["Tables"]["books"]["Row"];
+type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 import {
   clearCurrent,
   deleteBook,
   insertBook,
+  mapBook,
+  mapCurrent,
   updateBookRead,
   upsertCurrent,
 } from "@/lib/api";
@@ -29,6 +36,48 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    const clubFilter = `club_id=eq.${CLUB_ID}`;
+    const channel = supabase
+      .channel(`club:${CLUB_ID}`)
+      .on<BookRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "books", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const incoming = mapBook(payload.new);
+            setBooks((prev) =>
+              prev.some((b) => b.id === incoming.id) ? prev : [incoming, ...prev],
+            );
+          } else if (payload.eventType === "UPDATE") {
+            const incoming = mapBook(payload.new);
+            setBooks((prev) => prev.map((b) => (b.id === incoming.id ? incoming : b)));
+          } else if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setBooks((prev) => prev.filter((b) => b.id !== id));
+            setCurrent((cur) => (cur?.bookId === id ? null : cur));
+          }
+        },
+      )
+      .on<CurrentRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "current_reading", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setCurrent(null);
+          } else {
+            setCurrent(mapCurrent(payload.new));
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
