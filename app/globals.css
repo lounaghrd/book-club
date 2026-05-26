@@ -1,0 +1,33 @@
+/* Tokens and base styles — full UI port lands in Pass 2. */
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --text: #fafafa;
+  --text-soft: #9a9a9a;
+  --muted: #5a5a5a;
+  --accent: #ff4a1c;
+  --accent-deep: #d63a10;
+  --border: #262626;
+  --border-strong: #353535;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  font-variation-settings: "wdth" 95, "opsz" 14;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100vh;
+}
