@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Book Club</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-2: #1c1c1c;
+    --text: #fafafa;
+    --text-soft: #9a9a9a;
+    --muted: #5a5a5a;
+    --accent: #ff4a1c;
+    --accent-deep: #d63a10;
+    --border: #262626;
+    --border-strong: #353535;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+    font-variation-settings: "wdth" 95, "opsz" 14;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: 100vh;
+    padding-bottom: 110px;
+  }
+
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 16px 0;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 24px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-variation-settings: "wdth" 85;
+  }
+  .logo .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    margin-right: 10px;
+    vertical-align: 1px;
+  }
+  .meta-pill {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Hero */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 22px 22px 24px;
+    margin-bottom: 40px;
+    position: relative;
+  }
+  .hero-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hero-label::before {
+    content: '';
+    width: 18px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .hero-title {
+    font-size: 40px;
+    line-height: 1.0;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    font-variation-settings: "wdth" 85, "opsz" 48;
+    margin-bottom: 8px;
+    word-break: break-word;
+  }
+  .hero-author {
+    font-size: 15px;
+    color: var(--text-soft);
+    letter-spacing: 0.01em;
+    margin-bottom: 22px;
+  }
+
+  .countdown-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .countdown-num {
+    font-size: 76px;
+    font-weight: 700;
+    line-height: 0.82;
+    letter-spacing: -0.05em;
+    font-variation-settings: "wdth" 80, "opsz" 72;
+    color: var(--text);
+  }
+  .countdown-num.today { color: var(--accent); }
+  .countdown-num.past { color: var(--muted); }
+  .countdown-side {
+    padding-top: 6px;
+    flex: 1;
+  }
+  .countdown-label {
+    font-size: 12px;
+    color: var(--text-soft);
+    line-height: 1.3;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .countdown-date {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    letter-spacing: 0.04em;
+  }
+
+  .hero-meta-warning {
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+  }
+
+  /* Kebab menu */
+  .hero-menu-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    z-index: 3;
+  }
+  .hero-menu-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .hero-menu-btn:active { transform: scale(0.94); }
+  .hero-menu-btn svg { width: 16px; height: 16px; }
+
+  .hero-menu {
+    position: absolute;
+    top: 56px;
+    right: 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+    min-width: 180px;
+    z-index: 4;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.4);
+  }
+  .hero-menu.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .hero-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 13px 16px;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+  }
+  .hero-menu button:last-child { border-bottom: none; }
+  .hero-menu button:hover { background: var(--bg); }
+  .hero-menu button.danger { color: var(--accent); }
+
+  .hero-empty {
+    padding: 8px 0 4px;
+  }
+  .hero-empty-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variation-settings: "wdth" 85;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .hero-empty-sub {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  /* Section */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-variation-settings: "wdth" 85;
+    text-transform: uppercase;
+  }
+  .section-count {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 11px 8px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-right: 1px solid var(--border);
+  }
+  .tab:last-child { border-right: none; }
+  .tab.active {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  /* Book list */
+  .book-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid var(--border);
+  }
+  .book {
+    padding: 16px 4px 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    transition: opacity 0.15s;
+  }
+  .book.read { opacity: 0.4; }
+  .book.read .book-title {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+  }
+  .book-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .book-title {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    font-variation-settings: "wdth" 92;
+    margin-bottom: 3px;
+    word-break: break-word;
+  }
+  .book-author {
+    font-size: 13px;
+    color: var(--text-soft);
+    line-height: 1.3;
+  }
+  .book-meta {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-weight: 600;
+  }
+
+  .book-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    flex-shrink: 0;
+  }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .icon-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg);
+  }
+  .icon-btn.primary:hover {
+    background: var(--accent-deep);
+    border-color: var(--accent-deep);
+  }
+  .icon-btn svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Buttons */
+  .btn {
+    background: var(--text);
+    color: var(--bg);
+    border: 1px solid var(--text);
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .btn:hover { background: #d0d0d0; border-color: #d0d0d0; }
+  .btn:active { transform: scale(0.97); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-soft);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+    background: transparent;
+  }
+  .btn-small { padding: 8px 10px; font-size: 10px; }
+
+  .empty {
+    padding: 36px 16px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 16px 28px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(255, 74, 28, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 50;
+    transition: all 0.18s;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .fab:hover { background: var(--accent-deep); transform: translateX(-50%) translateY(-1px); }
+  .fab:active { transform: translateX(-50%) scale(0.97); }
+  .fab svg { width: 14px; height: 14px; stroke-width: 2.6; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-bottom: none;
+    width: 100%;
+    max-width: 480px;
+    padding: 14px 20px 28px;
+    transform: translateY(100%);
+    transition: transform 0.25s cubic-bezier(0.32, 0.72, 0.32, 1);
+  }
+  .modal-backdrop.open .modal { transform: translateY(0); }
+  .modal-handle {
+    width: 38px;
+    height: 3px;
+    background: var(--border-strong);
+    margin: 0 auto 20px;
+  }
+  .modal-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    font-variation-settings: "wdth" 85;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .modal-subtext {
+    margin-bottom: 16px;
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .field input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--text);
+  }
+  .field input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.5;
+    cursor: pointer;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .modal-actions .btn {
+    flex: 1;
+    padding: 14px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero { animation: fadeUp 0.35s ease-out backwards; }
+  .book { animation: fadeUp 0.3s ease-out backwards; }
+  .book:nth-child(1) { animation-delay: 0.04s; }
+  .book:nth-child(2) { animation-delay: 0.08s; }
+  .book:nth-child(3) { animation-delay: 0.12s; }
+  .book:nth-child(4) { animation-delay: 0.16s; }
+  .book:nth-child(n+5) { animation-delay: 0.2s; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo"><span class="dot"></span>Book Club</div>
+  </header>
+
+  <div class="hero" id="hero"></div>
+
+  <div class="section-header">
+    <div class="section-title">Reading List</div>
+    <div class="section-count" id="count">0 books</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-filter="available">Up next</button>
+    <button class="tab" data-filter="read">Read</button>
+  </div>
+
+  <div class="book-list" id="bookList"></div>
+</div>
+
+<button class="fab" onclick="openAddModal()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  Suggest a book
+</button>
+
+<div class="modal-backdrop" id="addModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Suggest a Book</div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="newTitle" placeholder="The Master and Margarita" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Author</label>
+      <input type="text" id="newAuthor" placeholder="Mikhail Bulgakov" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Suggested by (optional)</label>
+      <input type="text" id="newWho" placeholder="Your name" autocomplete="off">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn" onclick="addBook()">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pinModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="pinTitle">Pin as Current</div>
+    <div class="modal-subtext" id="pinBookPreview"></div>
+    <div class="field">
+      <label>Meeting date</label>
+      <input type="date" id="meetingDate">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closePinModal()">Cancel</button>
+      <button class="btn" onclick="confirmPin()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = 'bookclub:state:v1';
+  const storage = {
+    async get(key) {
+      if (typeof window.storage?.get === 'function') {
+        try {
+          const r = await window.storage.get(key, true);
+          return r?.value ?? null;
+        } catch (e) { return null; }
+      }
+      return localStorage.getItem(key);
+    },
+    async set(key, value) {
+      if (typeof window.storage?.set === 'function') {
+        try { await window.storage.set(key, value, true); } catch (e) { console.warn('storage.set failed', e); }
+      } else {
+        localStorage.setItem(key, value);
+      }
+    }
+  };
+
+  let state = { books: [], current: null };
+  let currentFilter = 'available';
+  let pinTargetId = null;
+
+  async function load() {
+    const raw = await storage.get(STORAGE_KEY);
+    if (raw) {
+      try { state = JSON.parse(raw); } catch (e) {}
+    }
+    if (!state.books) state.books = [];
+  }
+  async function save() { await storage.set(STORAGE_KEY, JSON.stringify(state)); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+  function daysUntil(iso) {
+    if (!iso) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(iso + 'T00:00:00');
+    return Math.round((target - today) / 86400000);
+  }
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  const ICONS = {
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 17 .01 5"/><path d="M14.7 13.5 17 11.2A4 4 0 0 0 18 8V5h1a1 1 0 0 0 0-2H5a1 1 0 0 0 0 2h1v3a4 4 0 0 0 1 2.7l2.3 2.3a1 1 0 0 1 0 1.4L6 17h12l-3.3-2.6a1 1 0 0 1 0-1.4z"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+    undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>',
+    x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+  };
+
+  function render() { renderHero(); renderList(); }
+
+  function renderHero() {
+    const hero = document.getElementById('hero');
+    const current = state.current;
+    const currentBook = current ? state.books.find(b => b.id === current.bookId) : null;
+
+    if (!currentBook) {
+      hero.innerHTML = `
+        <div class="hero-empty">
+          <div class="hero-label">Currently Reading</div>
+          <div class="hero-empty-title">Nothing<br>pinned yet</div>
+          <div class="hero-empty-sub">Pick a book from the list below.</div>
+        </div>
+      `;
+      return;
+    }
+
+    const days = current.meetingDate ? daysUntil(current.meetingDate) : null;
+    let countdownHtml = '';
+
+    if (days !== null) {
+      let numClass = '';
+      let labelTop = '';
+      let labelBottom = '';
+      if (days > 1) { labelTop = 'Days'; labelBottom = 'until we meet'; }
+      else if (days === 1) { labelTop = 'Day'; labelBottom = 'see you tomorrow'; }
+      else if (days === 0) { numClass = 'today'; labelTop = 'Today'; labelBottom = 'meeting happening now'; }
+      else { numClass = 'past'; labelTop = days === -1 ? 'Day' : 'Days'; labelBottom = 'since the meeting'; }
+
+      countdownHtml = `
+        <div class="countdown-block">
+          <div class="countdown-num ${numClass}">${days === 0 ? '0' : Math.abs(days)}</div>
+          <div class="countdown-side">
+            <div class="countdown-label">${labelTop}<br>${labelBottom}</div>
+            <div class="countdown-date">${formatDate(current.meetingDate).toUpperCase()}</div>
+          </div>
+        </div>
+      `;
+    } else {
+      countdownHtml = `
+        <div class="countdown-block">
+          <div class="hero-meta-warning">No meeting scheduled</div>
+        </div>
+      `;
+    }
+
+    hero.innerHTML = `
+      <button class="hero-menu-btn" onclick="toggleHeroMenu(event)" aria-label="Actions">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+      </button>
+      <div class="hero-label">Currently Reading</div>
+      <div class="hero-title">${escapeHtml(currentBook.title)}</div>
+      <div class="hero-author">${escapeHtml(currentBook.author || 'Unknown')}</div>
+      ${countdownHtml}
+      <div class="hero-menu" id="heroMenu">
+        <button onclick="closeHeroMenu(); reschedule()">Change date</button>
+        <button onclick="closeHeroMenu(); finishCurrent()">Mark finished</button>
+        <button class="danger" onclick="closeHeroMenu(); unpinCurrent()">Unpin</button>
+      </div>
+    `;
+  }
+
+  function toggleHeroMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('heroMenu');
+    if (menu) menu.classList.toggle('open');
+  }
+  function closeHeroMenu() {
+    const menu = document.getElementById('heroMenu');
+    if (menu) menu.classList.remove('open');
+  }
+  document.addEventListener('click', (e) => {
+    const menu = document.getElementById('heroMenu');
+    if (menu && menu.classList.contains('open') && !menu.contains(e.target) && !e.target.closest('.hero-menu-btn')) {
+      menu.classList.remove('open');
+    }
+  });
+
+  function renderList() {
+    const list = document.getElementById('bookList');
+    const count = document.getElementById('count');
+
+    const currentId = state.current?.bookId;
+    let filtered = state.books.filter(b => b.id !== currentId);
+    if (currentFilter === 'available') filtered = filtered.filter(b => !b.read);
+    else if (currentFilter === 'read') filtered = filtered.filter(b => b.read);
+    filtered.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+
+    const total = state.books.length;
+    count.textContent = `${filtered.length} ${filtered.length === 1 ? 'book' : 'books'}`;
+
+    if (filtered.length === 0) {
+      let msg = 'Nothing here yet.';
+      if (currentFilter === 'read') msg = 'No books read yet.';
+      else if (currentFilter === 'available') msg = total === 0 ? 'No books yet — suggest the first.' : 'All suggestions read. Add some new ones.';
+      list.innerHTML = `<div class="empty">${msg}</div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(book => `
+      <div class="book ${book.read ? 'read' : ''}">
+        <div class="book-info">
+          <div class="book-title">${escapeHtml(book.title)}</div>
+          ${book.author ? `<div class="book-author">${escapeHtml(book.author)}</div>` : ''}
+          ${book.suggestedBy ? `<div class="book-meta">By ${escapeHtml(book.suggestedBy)}</div>` : ''}
+        </div>
+        <div class="book-actions">
+          ${!book.read ? `<button class="icon-btn primary" title="Pin as current" onclick="openPinModal('${book.id}')">${ICONS.pin}</button>` : ''}
+          <button class="icon-btn" title="${book.read ? 'Mark as unread' : 'Mark as read'}" onclick="toggleRead('${book.id}')">${book.read ? ICONS.undo : ICONS.check}</button>
+          <button class="icon-btn" title="Remove" onclick="removeBook('${book.id}')">${ICONS.x}</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openAddModal() {
+    document.getElementById('newTitle').value = '';
+    document.getElementById('newAuthor').value = '';
+    document.getElementById('newWho').value = '';
+    document.getElementById('addModal').classList.add('open');
+    setTimeout(() => document.getElementById('newTitle').focus(), 280);
+  }
+  function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+
+  async function addBook() {
+    const title = document.getElementById('newTitle').value.trim();
+    const author = document.getElementById('newAuthor').value.trim();
+    const who = document.getElementById('newWho').value.trim();
+    if (!title) { document.getElementById('newTitle').focus(); return; }
+    state.books.push({ id: uid(), title, author, suggestedBy: who, read: false, addedAt: Date.now() });
+    await save();
+    closeAddModal();
+    render();
+  }
+
+  function openPinModal(bookId) {
+    pinTargetId = bookId;
+    const book = state.books.find(b => b.id === bookId);
+    document.getElementById('pinTitle').textContent = 'Pin as Current';
+    document.getElementById('pinBookPreview').innerHTML = book
+      ? `&ldquo;${escapeHtml(book.title)}&rdquo;${book.author ? ' · ' + escapeHtml(book.author) : ''}`
+      : '';
+    const d = new Date();
+    d.setDate(d.getDate() + 28);
+    document.getElementById('meetingDate').value = d.toISOString().slice(0, 10);
+    document.getElementById('pinModal').classList.add('open');
+  }
+  function closePinModal() { document.getElementById('pinModal').classList.remove('open'); pinTargetId = null; }
+
+  async function confirmPin() {
+    const date = document.getElementById('meetingDate').value;
+    if (!date) { document.getElementById('meetingDate').focus(); return; }
+    if (pinTargetId === '__current__') state.current.meetingDate = date;
+    else state.current = { bookId: pinTargetId, meetingDate: date };
+    await save();
+    closePinModal();
+    render();
+  }
+
+  function reschedule() {
+    if (!state.current) return;
+    pinTargetId = '__current__';
+    const book = state.books.find(b => b.id === state.current.bookId);
+    document.getElementById('pinTitle').textContent = 'Reschedule';
+    document.getElementById('pinBookPreview').innerHTML = book ? `&ldquo;${escapeHtml(book.title)}&rdquo;` : '';
+    document.getElementById('meetingDate').value = state.current.meetingDate || '';
+    document.getElementById('pinModal').classList.add('open');
+  }
+
+  async function finishCurrent() {
+    if (!state.current) return;
+    const book = state.books.find(b => b.id === state.current.bookId);
+    if (book) book.read = true;
+    state.current = null;
+    await save();
+    render();
+  }
+
+  async function unpinCurrent() { state.current = null; await save(); render(); }
+
+  async function toggleRead(id) {
+    const book = state.books.find(b => b.id === id);
+    if (!book) return;
+    book.read = !book.read;
+    await save();
+    render();
+  }
+
+  async function removeBook(id) {
+    if (!confirm('Remove this book from the list?')) return;
+    state.books = state.books.filter(b => b.id !== id);
+    if (state.current?.bookId === id) state.current = null;
+    await save();
+    render();
+  }
+
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      renderList();
+    });
+  });
+
+  document.querySelectorAll('.modal-backdrop').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  });
+
+  ['newTitle', 'newAuthor', 'newWho'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') addBook(); });
+  });
+
+  window.addEventListener('focus', async () => { await load(); render(); });
+
+  (async () => {
+    await load();
+    if (state.books.length === 0) {
+      const meetingDate = new Date();
+      meetingDate.setDate(meetingDate.getDate() + 18);
+      const seedBooks = [
+        { id: uid(), title: 'The Master and Margarita', author: 'Mikhail Bulgakov', suggestedBy: 'Louna', read: false, addedAt: Date.now() - 5000 },
+        { id: uid(), title: 'Tomorrow, and Tomorrow, and Tomorrow', author: 'Gabrielle Zevin', suggestedBy: 'Marc', read: false, addedAt: Date.now() - 4000 },
+        { id: uid(), title: 'Klara and the Sun', author: 'Kazuo Ishiguro', suggestedBy: 'Sofia', read: false, addedAt: Date.now() - 3000 },
+        { id: uid(), title: 'The Wind-Up Bird Chronicle', author: 'Haruki Murakami', suggestedBy: 'Diego', read: false, addedAt: Date.now() - 2000 },
+        { id: uid(), title: 'Pachinko', author: 'Min Jin Lee', suggestedBy: 'Elena', read: true, addedAt: Date.now() - 10000 }
+      ];
+      state.books = seedBooks;
+      state.current = { bookId: seedBooks[0].id, meetingDate: meetingDate.toISOString().slice(0, 10) };
+      await save();
+    }
+    render();
+  })();
+</script>
+</body>
+</html>
