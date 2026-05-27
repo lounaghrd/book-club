@@ -20,6 +20,7 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - **Pass 5** — Polish (dark theme color for mobile chrome) + Vercel deploy
 - **Install prompt** — First-visit bottom sheet explaining "Add to Home Screen", dismissal persisted in `localStorage` (`bookclub:install_dismissed`)
 - **App icon** — Dark tile with a centered orange square, generated via `next/og` (`app/icon.tsx` for favicon, `app/apple-icon.tsx` for home-screen)
+- **Book-row kebab menu** — Per-row Pin/Check/X buttons replaced with a single ⋮ that opens a popover styled to match the pinned-book (hero) menu. Available books offer Pin / Mark finished / Delete; read books offer Mark unread / Delete. Read rows un-dim while their menu is open so the menu stays legible.
 
 ## Key files
 
@@ -45,6 +46,7 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - **History:** finished books stay forever in the "Read" tab — no archival.
 - **Optimistic UI everywhere:** local state updates first, then Supabase write; on failure we roll back. Realtime echoes are deduped by id.
 - **Database types:** hand-written in `lib/database.types.ts` to avoid Supabase CLI dependency. Regenerate via `supabase gen types typescript --project-id <id>` if the schema changes.
+- **Destructive actions behind a menu:** book-row actions live behind a kebab rather than as always-visible icons, to make Delete and Pin harder to mis-tap. Style is shared with the hero menu — if you touch one, keep them visually consistent.
 
 ## Env vars
 
