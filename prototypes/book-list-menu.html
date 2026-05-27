@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book list — kebab menu prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@10..48,75..100,400..800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --text: #fafafa;
+  --text-soft: #9a9a9a;
+  --muted: #5a5a5a;
+  --accent: #ff4a1c;
+  --accent-deep: #d63a10;
+  --border: #262626;
+  --border-strong: #353535;
+  --danger: #ff5a4a;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  font-variation-settings: "wdth" 95, "opsz" 14;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+body { min-height: 100vh; padding-bottom: 60px; }
+.container { max-width: 480px; margin: 0 auto; padding: 28px 16px 0; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; font-variation-settings: "wdth" 85;
+}
+.logo .dot { display: inline-block; width: 8px; height: 8px; background: var(--accent); margin-right: 10px; vertical-align: 1px; }
+.meta-pill { font-size: 11px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+
+.proto-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.proto-note strong { color: var(--text); }
+.proto-toggle {
+  display: inline-flex; gap: 6px; margin-top: 10px;
+}
+.proto-toggle button {
+  background: transparent; color: var(--text-soft);
+  border: 1px solid var(--border); padding: 4px 10px;
+  font-family: inherit; font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; cursor: pointer;
+}
+.proto-toggle button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-soft); }
+.section-count { font-size: 11px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+
+.tabs { display: flex; margin-bottom: 8px; border: 1px solid var(--border); }
+.tab {
+  flex: 1; background: transparent; border: none; padding: 10px 0;
+  color: var(--text-soft); font-family: inherit;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; cursor: pointer; border-right: 1px solid var(--border);
+}
+.tab:last-child { border-right: none; }
+.tab.active { background: var(--text); color: var(--bg); }
+
+.book-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); }
+.book {
+  padding: 16px 4px 16px 0;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.15s;
+  position: relative;
+}
+.book.read { opacity: 0.4; }
+.book.read .book-title { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.book-info { flex: 1; min-width: 0; }
+.book-title { font-size: 17px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; font-variation-settings: "wdth" 92; margin-bottom: 3px; word-break: break-word; }
+.book-author { font-size: 13px; color: var(--text-soft); line-height: 1.3; }
+.book-meta { font-size: 10px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; }
+
+.book-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.icon-btn {
+  width: 36px; height: 36px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0;
+}
+.icon-btn:active { transform: scale(0.94); }
+.icon-btn:hover { border-color: var(--border-strong); color: var(--text); }
+.icon-btn svg { width: 15px; height: 15px; }
+
+/* Menu (popover) */
+.menu-wrap { position: relative; }
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  display: none;
+  flex-direction: column;
+  padding: 4px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+}
+.menu.open { display: flex; }
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.menu-item:hover { background: var(--surface-2); }
+.menu-item svg { width: 15px; height: 15px; color: var(--text-soft); flex-shrink: 0; }
+.menu-item:hover svg { color: var(--text); }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger svg { color: var(--danger); }
+.menu-item.primary svg { color: var(--accent); }
+
+.menu-scrim {
+  position: fixed; inset: 0; z-index: 10;
+  background: transparent;
+  display: none;
+}
+.menu-scrim.open { display: block; }
+
+/* Bottom sheet variant */
+.sheet-scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(0,0,0,0.55);
+  display: none;
+  align-items: flex-end; justify-content: center;
+}
+.sheet-scrim.open { display: flex; }
+.sheet {
+  width: 100%; max-width: 480px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+  animation: sheet-in 0.18s ease-out;
+}
+@keyframes sheet-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.sheet-handle { width: 36px; height: 4px; background: var(--border-strong); margin: 0 auto 12px; border-radius: 2px; }
+.sheet-title { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-soft); padding: 0 8px 10px; }
+.sheet .menu-item { padding: 14px 12px; font-size: 15px; }
+.sheet .menu-item svg { width: 17px; height: 17px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo"><span class="dot"></span>BOOK CLUB</div>
+    <div class="meta-pill">PROTOTYPE</div>
+  </header>
+
+  <div class="proto-note">
+    <strong>What changed:</strong> per-book action buttons are gone. Tap the kebab (⋮) on any row to open a menu with <em>Pin book</em>, <em>Mark finished</em>, and <em>Delete</em>. Read books show <em>Mark unread</em> and <em>Delete</em>.
+    <div class="proto-toggle">
+      <button id="mode-popover" class="active">Popover</button>
+      <button id="mode-sheet">Bottom sheet</button>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Reading List</div>
+    <div class="section-count">3 books</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active">Up next</button>
+    <button class="tab">Read</button>
+  </div>
+
+  <div class="book-list" id="book-list"></div>
+</div>
+
+<div class="menu-scrim" id="menu-scrim"></div>
+
+<div class="sheet-scrim" id="sheet-scrim">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="sheet-title">Book actions</div>
+    <div id="sheet-items"></div>
+  </div>
+</div>
+
+<script>
+const ICONS = {
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 17 .01 5"/><path d="M14.7 13.5 17 11.2A4 4 0 0 0 18 8V5h1a1 1 0 0 0 0-2H5a1 1 0 0 0 0 2h1v3a4 4 0 0 0 1 2.7l2.3 2.3a1 1 0 0 1 0 1.4L6 17h12l-3.3-2.6a1 1 0 0 1 0-1.4z"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  undo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6 18 20a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>',
+  kebab: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>'
+};
+
+const books = [
+  { id: '1', title: 'Piranesi', author: 'Susanna Clarke', suggestedBy: 'Lou', read: false },
+  { id: '2', title: 'The Overstory', author: 'Richard Powers', suggestedBy: 'Sam', read: false },
+  { id: '3', title: 'Bluets', author: 'Maggie Nelson', suggestedBy: 'Alex', read: true },
+];
+
+let mode = 'popover';
+let openId = null;
+
+function actionsFor(book) {
+  if (book.read) {
+    return [
+      { id: 'unread', label: 'Mark unread', icon: ICONS.undo },
+      { id: 'delete', label: 'Delete', icon: ICONS.trash, danger: true },
+    ];
+  }
+  return [
+    { id: 'pin', label: 'Pin book', icon: ICONS.pin, primary: true },
+    { id: 'finish', label: 'Mark finished', icon: ICONS.check },
+    { id: 'delete', label: 'Delete', icon: ICONS.trash, danger: true },
+  ];
+}
+
+function render() {
+  const list = document.getElementById('book-list');
+  list.innerHTML = books.map(b => `
+    <div class="book${b.read ? ' read' : ''}">
+      <div class="book-info">
+        <div class="book-title">${b.title}</div>
+        <div class="book-author">${b.author}</div>
+        <div class="book-meta">By ${b.suggestedBy}</div>
+      </div>
+      <div class="book-actions">
+        <div class="menu-wrap">
+          <button class="icon-btn" data-kebab="${b.id}" aria-label="Open menu">${ICONS.kebab}</button>
+          <div class="menu${openId === b.id && mode === 'popover' ? ' open' : ''}" data-menu="${b.id}">
+            ${actionsFor(b).map(a => `
+              <button class="menu-item${a.danger ? ' danger' : ''}${a.primary ? ' primary' : ''}" data-action="${a.id}" data-book="${b.id}">
+                ${a.icon}<span>${a.label}</span>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('menu-scrim').classList.toggle('open', !!openId && mode === 'popover');
+
+  const sheetScrim = document.getElementById('sheet-scrim');
+  if (openId && mode === 'sheet') {
+    const b = books.find(x => x.id === openId);
+    document.getElementById('sheet-title').textContent = b.title;
+    document.getElementById('sheet-items').innerHTML = actionsFor(b).map(a => `
+      <button class="menu-item${a.danger ? ' danger' : ''}${a.primary ? ' primary' : ''}" data-action="${a.id}" data-book="${b.id}">
+        ${a.icon}<span>${a.label}</span>
+      </button>
+    `).join('');
+    sheetScrim.classList.add('open');
+  } else {
+    sheetScrim.classList.remove('open');
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const kebab = e.target.closest('[data-kebab]');
+  if (kebab) {
+    const id = kebab.dataset.kebab;
+    openId = openId === id ? null : id;
+    render();
+    return;
+  }
+  const action = e.target.closest('[data-action]');
+  if (action) {
+    const { action: a, book: id } = action.dataset;
+    const b = books.find(x => x.id === id);
+    if (a === 'pin') alert(`Pin: ${b.title}`);
+    if (a === 'finish') { b.read = true; }
+    if (a === 'unread') { b.read = false; }
+    if (a === 'delete') { books.splice(books.findIndex(x => x.id === id), 1); }
+    openId = null;
+    render();
+    return;
+  }
+  if (e.target.closest('#menu-scrim') || e.target.closest('#sheet-scrim') && !e.target.closest('#sheet')) {
+    openId = null;
+    render();
+  }
+});
+
+document.getElementById('mode-popover').addEventListener('click', () => {
+  mode = 'popover';
+  document.getElementById('mode-popover').classList.add('active');
+  document.getElementById('mode-sheet').classList.remove('active');
+  openId = null; render();
+});
+document.getElementById('mode-sheet').addEventListener('click', () => {
+  mode = 'sheet';
+  document.getElementById('mode-sheet').classList.add('active');
+  document.getElementById('mode-popover').classList.remove('active');
+  openId = null; render();
+});
+
+render();
+</script>
+</body>
+</html>
