@@ -6,37 +6,62 @@ import BookList from "./book-list";
 import Hero from "./hero";
 import InstallPrompt from "./install-prompt";
 import PinModal, { type PinTarget } from "./pin-modal";
+import UserPicker from "./user-picker";
 import { PlusIcon } from "./icons";
-import type { Book, CurrentReading, Filter } from "@/lib/types";
+import type { Book, CurrentReading, Filter, User } from "@/lib/types";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { CLUB_ID } from "@/lib/config";
 
 type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
+type UserRow = Database["public"]["Tables"]["users"]["Row"];
 import {
   clearCurrent,
   deleteBook,
+  deleteUser,
   insertBook,
+  insertUser,
   mapBook,
   mapCurrent,
+  mapUser,
   updateBookRead,
   upsertCurrent,
 } from "@/lib/api";
 
+const CURRENT_USER_KEY = "bookclub:current_user_id";
+
 type Props = {
   initialBooks: Book[];
   initialCurrent: CurrentReading | null;
+  initialUsers: User[];
 };
 
-export default function BookClub({ initialBooks, initialCurrent }: Props) {
+export default function BookClub({ initialBooks, initialCurrent, initialUsers }: Props) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [current, setCurrent] = useState<CurrentReading | null>(initialCurrent);
+  const [users, setUsers] = useState<User[]>(initialUsers);
   const [filter, setFilter] = useState<Filter>("available");
   const [addOpen, setAddOpen] = useState(false);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
+  // undefined = haven't read localStorage yet (avoids flashing the picker on hydration)
+  const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(CURRENT_USER_KEY);
+    } catch {
+      // localStorage unavailable — treat as no current user.
+    }
+    // Drop stale ids (user was deleted on another device).
+    if (stored && !initialUsers.some((u) => u.id === stored)) stored = null;
+    setCurrentUserId(stored);
+    if (!stored) setPickerOpen(true);
+  }, [initialUsers]);
 
   useEffect(() => {
     const clubFilter = `club_id=eq.${CLUB_ID}`;
@@ -73,6 +98,37 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
           }
         },
       )
+      .on<UserRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "users", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const incoming = mapUser(payload.new);
+            setUsers((prev) =>
+              prev.some((u) => u.id === incoming.id)
+                ? prev
+                : [...prev, incoming].sort((a, b) => a.createdAt - b.createdAt),
+            );
+          } else if (payload.eventType === "UPDATE") {
+            const incoming = mapUser(payload.new);
+            setUsers((prev) => prev.map((u) => (u.id === incoming.id ? incoming : u)));
+          } else if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setUsers((prev) => prev.filter((u) => u.id !== id));
+            setCurrentUserId((cur) => {
+              if (cur !== id) return cur;
+              try {
+                localStorage.removeItem(CURRENT_USER_KEY);
+              } catch {
+                // ignore
+              }
+              setPickerOpen(true);
+              return null;
+            });
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -82,13 +138,64 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
 
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
+  const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) ?? null : null;
 
-  async function addBook(data: { title: string; author: string; suggestedBy: string }) {
+  function selectUser(userId: string) {
+    setCurrentUserId(userId);
+    try {
+      localStorage.setItem(CURRENT_USER_KEY, userId);
+    } catch {
+      // ignore
+    }
+    setPickerOpen(false);
+  }
+
+  async function addUser(name: string): Promise<User | null> {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const existing = users.find((u) => u.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing;
+    const user: User = { id: crypto.randomUUID(), name: trimmed, createdAt: Date.now() };
+    setUsers((prev) => [...prev, user]);
+    try {
+      await insertUser(supabase, user);
+      return user;
+    } catch (e) {
+      console.error("Failed to add user", e);
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+      return null;
+    }
+  }
+
+  async function removeUser(userId: string) {
+    const prev = users;
+    setUsers((us) => us.filter((u) => u.id !== userId));
+    if (currentUserId === userId) {
+      setCurrentUserId(null);
+      try {
+        localStorage.removeItem(CURRENT_USER_KEY);
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      await deleteUser(supabase, userId);
+    } catch (e) {
+      console.error("Failed to delete user", e);
+      setUsers(prev);
+    }
+  }
+
+  async function addBook(data: { title: string; author: string }) {
+    if (!currentUserId) {
+      setPickerOpen(true);
+      return;
+    }
     const book: Book = {
       id: crypto.randomUUID(),
       title: data.title,
       author: data.author || null,
-      suggestedBy: data.suggestedBy || null,
+      suggestedByUserId: currentUserId,
       read: false,
       addedAt: Date.now(),
     };
@@ -190,6 +297,9 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
     }
   }
 
+  // Only surface the install prompt once a user is selected, so two sheets don't stack.
+  const showInstallPrompt = currentUserId !== undefined && currentUserId !== null && !pickerOpen;
+
   return (
     <>
       <div className="container">
@@ -198,6 +308,16 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
             <span className="dot" />
             Book Club
           </div>
+          {currentUser ? (
+            <button
+              className="user-chip"
+              onClick={() => setPickerOpen(true)}
+              aria-label="Change user"
+            >
+              <span className="user-chip-dot" />
+              {currentUser.name}
+            </button>
+          ) : null}
         </header>
 
         <Hero
@@ -210,6 +330,7 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
 
         <BookList
           books={listBooks}
+          users={users}
           filter={filter}
           onFilter={setFilter}
           onPin={openPin}
@@ -225,7 +346,17 @@ export default function BookClub({ initialBooks, initialCurrent }: Props) {
 
       <AddModal open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addBook} />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
-      <InstallPrompt />
+      <UserPicker
+        open={pickerOpen}
+        users={users}
+        currentUserId={currentUserId ?? null}
+        dismissible={!!currentUserId}
+        onClose={() => setPickerOpen(false)}
+        onSelect={selectUser}
+        onAdd={addUser}
+        onDelete={removeUser}
+      />
+      {showInstallPrompt ? <InstallPrompt /> : null}
     </>
   );
 }

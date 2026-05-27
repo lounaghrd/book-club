@@ -709,6 +709,107 @@ header {
   padding: 16px;
 }
 
+/* User chip (in header) */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 7px 11px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  font-variation-settings: "wdth" 85;
+}
+.user-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.user-chip:active {
+  transform: scale(0.97);
+}
+.user-chip-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* User picker sheet */
+.user-picker-sheet {
+  padding-bottom: 22px;
+}
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.user-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.user-btn {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.user-btn:hover {
+  border-color: var(--border-strong);
+}
+.user-btn:active {
+  transform: scale(0.99);
+}
+.user-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.user-btn-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 3px 6px;
+}
+.user-delete-btn {
+  width: 44px;
+  height: auto;
+  flex-shrink: 0;
+}
+.user-add-toggle {
+  width: 100%;
+  padding: 13px;
+}
+.user-add-field {
+  margin-bottom: 6px;
+}
+.user-picker-dismiss {
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px;
+}
+
 @keyframes fadeUp {
   from {
     opacity: 0;

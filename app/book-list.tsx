@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import type { Book, Filter } from "@/lib/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Book, Filter, User } from "@/lib/types";
 import { KebabIcon } from "./icons";
 
 type Props = {
   books: Book[];
+  users: User[];
   filter: Filter;
   onFilter: (f: Filter) => void;
   onPin: (bookId: string) => void;
@@ -13,7 +14,9 @@ type Props = {
   onRemove: (bookId: string) => void;
 };
 
-export default function BookList({ books, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
+export default function BookList({ books, users, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
+  const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
@@ -77,12 +80,15 @@ export default function BookList({ books, filter, onFilter, onPin, onToggleRead,
         ) : (
           filtered.map((book) => {
             const isOpen = openMenuId === book.id;
+            const suggesterName = book.suggestedByUserId
+              ? usersById.get(book.suggestedByUserId)?.name ?? null
+              : null;
             return (
               <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
                 <div className="book-info">
                   <div className="book-title">{book.title}</div>
                   {book.author ? <div className="book-author">{book.author}</div> : null}
-                  {book.suggestedBy ? <div className="book-meta">By {book.suggestedBy}</div> : null}
+                  {suggesterName ? <div className="book-meta">By {suggesterName}</div> : null}
                 </div>
                 <div
                   className="book-actions"
