@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Book list — kebab menu prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@10..48,75..100,400..800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --surface: #141414;
+  --surface-2: #1c1c1c;
+  --text: #fafafa;
+  --text-soft: #9a9a9a;
+  --muted: #5a5a5a;
+  --accent: #ff4a1c;
+  --accent-deep: #d63a10;
+  --border: #262626;
+  --border-strong: #353535;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, sans-serif;
+  font-variation-settings: "wdth" 95, "opsz" 14;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+body { min-height: 100vh; padding-bottom: 60px; }
+.container { max-width: 480px; margin: 0 auto; padding: 28px 16px 0; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 24px; margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.22em;
+  text-transform: uppercase; font-variation-settings: "wdth" 85;
+}
+.logo .dot { display: inline-block; width: 8px; height: 8px; background: var(--accent); margin-right: 10px; vertical-align: 1px; }
+.meta-pill { font-size: 11px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+
+.proto-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  margin-bottom: 24px;
+  font-size: 12px;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+.proto-note strong { color: var(--text); }
+
+.section-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-soft); }
+.section-count { font-size: 11px; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-weight: 500; }
+
+.tabs { display: flex; margin-bottom: 8px; border: 1px solid var(--border); }
+.tab {
+  flex: 1; background: transparent; border: none; padding: 10px 0;
+  color: var(--text-soft); font-family: inherit;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.18em;
+  text-transform: uppercase; cursor: pointer; border-right: 1px solid var(--border);
+}
+.tab:last-child { border-right: none; }
+.tab.active { background: var(--text); color: var(--bg); }
+
+.book-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); }
+.book {
+  padding: 16px 4px 16px 0;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.15s;
+  position: relative;
+}
+.book.read { opacity: 0.4; }
+.book.read .book-title { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.book-info { flex: 1; min-width: 0; }
+.book-title { font-size: 17px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; font-variation-settings: "wdth" 92; margin-bottom: 3px; word-break: break-word; }
+.book-author { font-size: 13px; color: var(--text-soft); line-height: 1.3; }
+.book-meta { font-size: 10px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; }
+
+.book-actions { display: flex; gap: 4px; flex-shrink: 0; position: relative; }
+
+/* Kebab button — same look as .icon-btn / .hero-menu-btn */
+.book-menu-btn {
+  width: 36px; height: 36px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.book-menu-btn:hover { border-color: var(--border-strong); color: var(--text); }
+.book-menu-btn:active { transform: scale(0.94); }
+.book-menu-btn svg { width: 16px; height: 16px; }
+
+/* Menu — matches .hero-menu exactly */
+.book-menu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  min-width: 180px;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.book-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.book-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.book-menu button:last-child { border-bottom: none; }
+.book-menu button:hover { background: var(--bg); }
+.book-menu button.danger { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo"><span class="dot"></span>BOOK CLUB</div>
+    <div class="meta-pill">PROTOTYPE</div>
+  </header>
+
+  <div class="proto-note">
+    <strong>What changed:</strong> per-book action buttons are gone. Tap the kebab (⋮) on any row to open a menu — same look as the pinned-book menu. Unread books offer <em>Pin book</em>, <em>Mark finished</em>, <em>Delete</em>. Read books offer <em>Mark unread</em> and <em>Delete</em>.
+  </div>
+
+  <div class="section-header">
+    <div class="section-title">Reading List</div>
+    <div class="section-count">3 books</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active">Up next</button>
+    <button class="tab">Read</button>
+  </div>
+
+  <div class="book-list" id="book-list"></div>
+</div>
+
+<script>
+const KEBAB = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+
+const books = [
+  { id: '1', title: 'Piranesi', author: 'Susanna Clarke', suggestedBy: 'Lou', read: false },
+  { id: '2', title: 'The Overstory', author: 'Richard Powers', suggestedBy: 'Sam', read: false },
+  { id: '3', title: 'Bluets', author: 'Maggie Nelson', suggestedBy: 'Alex', read: true },
+];
+
+let openId = null;
+
+function actionsFor(book) {
+  if (book.read) {
+    return [
+      { id: 'unread', label: 'Mark unread' },
+      { id: 'delete', label: 'Delete', danger: true },
+    ];
+  }
+  return [
+    { id: 'pin', label: 'Pin book' },
+    { id: 'finish', label: 'Mark finished' },
+    { id: 'delete', label: 'Delete', danger: true },
+  ];
+}
+
+function render() {
+  const list = document.getElementById('book-list');
+  list.innerHTML = books.map(b => `
+    <div class="book${b.read ? ' read' : ''}">
+      <div class="book-info">
+        <div class="book-title">${b.title}</div>
+        <div class="book-author">${b.author}</div>
+        <div class="book-meta">By ${b.suggestedBy}</div>
+      </div>
+      <div class="book-actions">
+        <button class="book-menu-btn" data-kebab="${b.id}" aria-label="Actions">${KEBAB}</button>
+        <div class="book-menu${openId === b.id ? ' open' : ''}">
+          ${actionsFor(b).map(a => `
+            <button class="${a.danger ? 'danger' : ''}" data-action="${a.id}" data-book="${b.id}">${a.label}</button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.addEventListener('click', (e) => {
+  const kebab = e.target.closest('[data-kebab]');
+  if (kebab) {
+    e.stopPropagation();
+    const id = kebab.dataset.kebab;
+    openId = openId === id ? null : id;
+    render();
+    return;
+  }
+  const action = e.target.closest('[data-action]');
+  if (action) {
+    const { action: a, book: id } = action.dataset;
+    const b = books.find(x => x.id === id);
+    if (a === 'pin') alert(`Pin: ${b.title}`);
+    if (a === 'finish') { b.read = true; }
+    if (a === 'unread') { b.read = false; }
+    if (a === 'delete') { books.splice(books.findIndex(x => x.id === id), 1); }
+    openId = null;
+    render();
+    return;
+  }
+  if (openId !== null) { openId = null; render(); }
+});
+
+render();
+</script>
+</body>
+</html>
