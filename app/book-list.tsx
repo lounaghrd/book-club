@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Book, Filter } from "@/lib/types";
-import { CheckIcon, PinIcon, UndoIcon, XIcon } from "./icons";
+import { KebabIcon } from "./icons";
 
 type Props = {
   books: Book[];
@@ -13,6 +14,24 @@ type Props = {
 };
 
 export default function BookList({ books, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    function onDocClick(e: MouseEvent) {
+      if (menuContainerRef.current?.contains(e.target as Node)) return;
+      setOpenMenuId(null);
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [openMenuId]);
+
+  const runAction = (action: () => void) => {
+    setOpenMenuId(null);
+    action();
+  };
+
   const filtered = books
     .filter((b) => (filter === "available" ? !b.read : b.read))
     .sort((a, b) => b.addedAt - a.addedAt);
@@ -56,36 +75,45 @@ export default function BookList({ books, filter, onFilter, onPin, onToggleRead,
         {filtered.length === 0 ? (
           <div className="empty">{emptyMessage}</div>
         ) : (
-          filtered.map((book) => (
-            <div key={book.id} className={`book${book.read ? " read" : ""}`}>
-              <div className="book-info">
-                <div className="book-title">{book.title}</div>
-                {book.author ? <div className="book-author">{book.author}</div> : null}
-                {book.suggestedBy ? <div className="book-meta">By {book.suggestedBy}</div> : null}
-              </div>
-              <div className="book-actions">
-                {!book.read ? (
-                  <button
-                    className="icon-btn primary"
-                    title="Pin as current"
-                    onClick={() => onPin(book.id)}
-                  >
-                    <PinIcon />
-                  </button>
-                ) : null}
-                <button
-                  className="icon-btn"
-                  title={book.read ? "Mark as unread" : "Mark as read"}
-                  onClick={() => onToggleRead(book.id)}
+          filtered.map((book) => {
+            const isOpen = openMenuId === book.id;
+            return (
+              <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
+                <div className="book-info">
+                  <div className="book-title">{book.title}</div>
+                  {book.author ? <div className="book-author">{book.author}</div> : null}
+                  {book.suggestedBy ? <div className="book-meta">By {book.suggestedBy}</div> : null}
+                </div>
+                <div
+                  className="book-actions"
+                  ref={isOpen ? menuContainerRef : undefined}
                 >
-                  {book.read ? <UndoIcon /> : <CheckIcon />}
-                </button>
-                <button className="icon-btn" title="Remove" onClick={() => onRemove(book.id)}>
-                  <XIcon />
-                </button>
+                  <button
+                    className="icon-btn"
+                    aria-label="Actions"
+                    aria-expanded={isOpen}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenMenuId(isOpen ? null : book.id);
+                    }}
+                  >
+                    <KebabIcon />
+                  </button>
+                  <div className={`book-menu${isOpen ? " open" : ""}`}>
+                    {!book.read ? (
+                      <button onClick={() => runAction(() => onPin(book.id))}>Pin book</button>
+                    ) : null}
+                    <button onClick={() => runAction(() => onToggleRead(book.id))}>
+                      {book.read ? "Mark unread" : "Mark finished"}
+                    </button>
+                    <button className="danger" onClick={() => runAction(() => onRemove(book.id))}>
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>

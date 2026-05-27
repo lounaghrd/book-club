@@ -322,6 +322,9 @@ header {
 .book.read {
   opacity: 0.4;
 }
+.book.menu-open {
+  opacity: 1;
+}
 .book.read .book-title {
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
@@ -357,6 +360,53 @@ header {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
+  position: relative;
+}
+
+.book-menu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  min-width: 180px;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.book-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.book-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.book-menu button:last-child {
+  border-bottom: none;
+}
+.book-menu button:hover {
+  background: var(--bg);
+}
+.book-menu button.danger {
+  color: var(--accent);
 }
 .icon-btn {
   width: 36px;
