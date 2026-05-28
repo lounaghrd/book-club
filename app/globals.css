@@ -764,7 +764,7 @@ header {
 .user-row {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
 }
 .user-btn {
   flex: 1;
@@ -804,6 +804,11 @@ header {
 .user-actions {
   position: relative;
   flex-shrink: 0;
+}
+/* Match the kebab to the boxed row height (rows here are bordered buttons,
+   unlike the borderless book rows where the 36px square sits centered). */
+.user-actions .icon-btn {
+  height: 100%;
 }
 .user-menu {
   position: absolute;
