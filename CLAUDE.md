@@ -11,7 +11,7 @@ A mobile-first web app for a small private book club. Open-link access (no auth)
 
 ## Status
 
-Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
+Shipped and live on Vercel. Passes 1–5 done plus several follow-ups:
 
 - **Pass 1** — Next.js + Supabase scaffold
 - **Pass 2** — UI ported from `book-club.html` with hardcoded seed
@@ -36,7 +36,7 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - `app/globals.css` — all styles, ported from the prototype
 - `lib/api.ts` — Supabase queries and row ⇄ app-type mappers
 - `lib/supabase/client.ts` / `server.ts` — browser + server clients
-- `lib/types.ts` — `Book`, `CurrentReading`, `Filter`
+- `lib/types.ts` — `Book`, `CurrentReading`, `User`, `Filter`
 - `lib/database.types.ts` — hand-written DB types (mirrors `supabase gen types typescript`)
 - `lib/config.ts` — env var re-exports
 - `supabase/migrations/0001_init.sql` — schema (books, current_reading), RLS, realtime publication
