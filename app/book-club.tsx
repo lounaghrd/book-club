@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddModal from "./add-modal";
+import BookDetail, { type DetailAction } from "./book-detail";
 import BookList from "./book-list";
 import Hero from "./hero";
 import InstallPrompt from "./install-prompt";
@@ -47,6 +48,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   // undefined = haven't read localStorage yet (avoids flashing the picker on hydration)
   const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -142,6 +144,41 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
   const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) ?? null : null;
+
+  const detailBook = detailId ? books.find((b) => b.id === detailId) ?? null : null;
+  const detailIsPinned = !!detailBook && current?.bookId === detailBook.id;
+
+  function closeDetail() {
+    setDetailId(null);
+  }
+
+  function buildDetailActions(book: Book): DetailAction[] {
+    const wrap = (fn: () => void) => () => {
+      closeDetail();
+      fn();
+    };
+    if (detailIsPinned) {
+      return [
+        { label: "Change date", onClick: wrap(openReschedule) },
+        { label: "Edit", onClick: wrap(() => openEdit(book.id)) },
+        { label: "Mark finished", onClick: wrap(finishCurrent) },
+        { label: "Unpin", onClick: wrap(unpin), danger: true },
+      ];
+    }
+    if (book.read) {
+      return [
+        { label: "Edit", onClick: wrap(() => openEdit(book.id)) },
+        { label: "Mark unread", onClick: wrap(() => toggleRead(book.id)) },
+        { label: "Delete", onClick: wrap(() => removeBook(book.id)), danger: true },
+      ];
+    }
+    return [
+      { label: "Pin book", onClick: wrap(() => openPin(book.id)) },
+      { label: "Edit", onClick: wrap(() => openEdit(book.id)) },
+      { label: "Mark finished", onClick: wrap(() => toggleRead(book.id)) },
+      { label: "Delete", onClick: wrap(() => removeBook(book.id)), danger: true },
+    ];
+  }
 
   function selectUser(userId: string) {
     setCurrentUserId(userId);
@@ -364,23 +401,13 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
           ) : null}
         </header>
 
-        <Hero
-          current={current}
-          book={currentBook}
-          onReschedule={openReschedule}
-          onEdit={() => currentBook && openEdit(currentBook.id)}
-          onFinish={finishCurrent}
-          onUnpin={unpin}
-        />
+        <Hero current={current} book={currentBook} onOpenDetail={setDetailId} />
 
         <BookList
           books={listBooks}
           filter={filter}
           onFilter={setFilter}
-          onPin={openPin}
-          onEdit={openEdit}
-          onToggleRead={toggleRead}
-          onRemove={removeBook}
+          onOpenDetail={setDetailId}
         />
       </div>
 
@@ -398,6 +425,12 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
         initialNote={editTarget?.note ?? ""}
         onClose={() => setEditTarget(null)}
         onSubmit={editBook}
+      />
+      <BookDetail
+        book={detailBook}
+        meetingDate={detailIsPinned ? current?.meetingDate : null}
+        actions={detailBook ? buildDetailActions(detailBook) : []}
+        onClose={closeDetail}
       />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
       <UserPicker

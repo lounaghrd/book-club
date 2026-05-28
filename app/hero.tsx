@@ -1,40 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { Book, CurrentReading } from "@/lib/types";
 import { daysUntil, formatDate } from "@/lib/format";
-import { KebabIcon } from "./icons";
 
 type Props = {
   current: CurrentReading | null;
   book: Book | null;
-  onReschedule: () => void;
-  onEdit: () => void;
-  onFinish: () => void;
-  onUnpin: () => void;
+  onOpenDetail: (bookId: string) => void;
 };
 
-export default function Hero({ current, book, onReschedule, onEdit, onFinish, onUnpin }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    setNoteOpen(false);
-  }, [book?.id]);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target) || btnRef.current?.contains(target)) return;
-      setMenuOpen(false);
-    }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, [menuOpen]);
-
+export default function Hero({ current, book, onOpenDetail }: Props) {
   if (!book) {
     return (
       <div className="hero">
@@ -73,39 +48,11 @@ export default function Hero({ current, book, onReschedule, onEdit, onFinish, on
     }
   }
 
-  const handleMenuAction = (action: () => void) => {
-    setMenuOpen(false);
-    action();
-  };
-
   return (
-    <div className="hero">
-      <button
-        ref={btnRef}
-        className="hero-menu-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          setMenuOpen((o) => !o);
-        }}
-        aria-label="Actions"
-      >
-        <KebabIcon />
-      </button>
+    <button className="hero hero-button" onClick={() => onOpenDetail(book.id)}>
       <div className="hero-label">Currently Reading</div>
       <div className="hero-title">{book.title}</div>
       <div className="hero-author">{book.author || "Unknown"}</div>
-      {book.note ? (
-        <div className="hero-note-block">
-          <button
-            className="hero-note-toggle"
-            aria-expanded={noteOpen}
-            onClick={() => setNoteOpen((o) => !o)}
-          >
-            {noteOpen ? "Hide note" : "Why this pick"}
-          </button>
-          {noteOpen ? <div className="hero-note">{book.note}</div> : null}
-        </div>
-      ) : null}
       {days !== null && current?.meetingDate ? (
         <div className="countdown-block" suppressHydrationWarning>
           <div className={`countdown-num ${numClass}`}>{days === 0 ? "0" : Math.abs(days)}</div>
@@ -123,14 +70,6 @@ export default function Hero({ current, book, onReschedule, onEdit, onFinish, on
           <div className="hero-meta-warning">No meeting scheduled</div>
         </div>
       )}
-      <div ref={menuRef} className={`hero-menu${menuOpen ? " open" : ""}`}>
-        <button onClick={() => handleMenuAction(onReschedule)}>Change date</button>
-        <button onClick={() => handleMenuAction(onEdit)}>Edit</button>
-        <button onClick={() => handleMenuAction(onFinish)}>Mark finished</button>
-        <button className="danger" onClick={() => handleMenuAction(onUnpin)}>
-          Unpin
-        </button>
-      </div>
-    </div>
+    </button>
   );
 }
