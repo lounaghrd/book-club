@@ -74,6 +74,10 @@ npm run dev   # http://localhost:3000
 
 Vercel auto-deploys on push to the merged branch. Env vars live in the Vercel project settings (Settings → Environment Variables).
 
+## Workflow
+
+- **Docs-before-merge:** whenever asked to merge, first check whether the change needs documentation updates (CLAUDE.md, SPEC.md, etc.) and make them on the same branch *before* merging, so the docs land in the same PR as the feature — never as a separate follow-up PR.
+
 ## Gotchas
 
 - **Realtime + DELETE + filter:** `club_id=eq.<uuid>` filters require `REPLICA IDENTITY FULL` on the table; otherwise DELETE events arrive without `club_id` and get filtered out. Migration `0002` handles this — don't drop it.
