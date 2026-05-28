@@ -9,11 +9,12 @@ type Props = {
   current: CurrentReading | null;
   book: Book | null;
   onReschedule: () => void;
+  onEdit: () => void;
   onFinish: () => void;
   onUnpin: () => void;
 };
 
-export default function Hero({ current, book, onReschedule, onFinish, onUnpin }: Props) {
+export default function Hero({ current, book, onReschedule, onEdit, onFinish, onUnpin }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -107,6 +108,7 @@ export default function Hero({ current, book, onReschedule, onFinish, onUnpin }:
       )}
       <div ref={menuRef} className={`hero-menu${menuOpen ? " open" : ""}`}>
         <button onClick={() => handleMenuAction(onReschedule)}>Change date</button>
+        <button onClick={() => handleMenuAction(onEdit)}>Edit</button>
         <button onClick={() => handleMenuAction(onFinish)}>Mark finished</button>
         <button className="danger" onClick={() => handleMenuAction(onUnpin)}>
           Unpin

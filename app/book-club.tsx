@@ -367,6 +367,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
           current={current}
           book={currentBook}
           onReschedule={openReschedule}
+          onEdit={() => currentBook && openEdit(currentBook.id)}
           onFinish={finishCurrent}
           onUnpin={unpin}
         />
