@@ -7,8 +7,9 @@ type Props = {
   mode?: "add" | "edit";
   initialTitle?: string;
   initialAuthor?: string;
+  initialNote?: string;
   onClose: () => void;
-  onSubmit: (data: { title: string; author: string }) => void;
+  onSubmit: (data: { title: string; author: string; note: string }) => void;
 };
 
 export default function AddModal({
@@ -16,21 +17,24 @@ export default function AddModal({
   mode = "add",
   initialTitle = "",
   initialAuthor = "",
+  initialNote = "",
   onClose,
   onSubmit,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [author, setAuthor] = useState(initialAuthor);
+  const [note, setNote] = useState(initialNote);
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setTitle(initialTitle);
       setAuthor(initialAuthor);
+      setNote(initialNote);
       const t = setTimeout(() => titleRef.current?.focus(), 280);
       return () => clearTimeout(t);
     }
-  }, [open, initialTitle, initialAuthor]);
+  }, [open, initialTitle, initialAuthor, initialNote]);
 
   function submit() {
     const t = title.trim();
@@ -38,7 +42,7 @@ export default function AddModal({
       titleRef.current?.focus();
       return;
     }
-    onSubmit({ title: t, author: author.trim() });
+    onSubmit({ title: t, author: author.trim(), note: note.trim() });
   }
 
   function onKey(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -76,6 +80,15 @@ export default function AddModal({
             onKeyDown={onKey}
             placeholder="Mikhail Bulgakov"
             autoComplete="off"
+          />
+        </div>
+        <div className="field">
+          <label>Why this book? (optional)</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="A line or two on why you're suggesting it"
+            rows={3}
           />
         </div>
         <div className="modal-actions">

@@ -17,6 +17,7 @@ type Props = {
 export default function BookList({ books, filter, onFilter, onPin, onEdit, onToggleRead, onRemove }: Props) {
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function BookList({ books, filter, onFilter, onPin, onEdit, onTog
         ) : (
           filtered.map((book) => {
             const isOpen = openMenuId === book.id;
+            const isExpanded = expandedId === book.id;
             const suggesterName = book.suggestedByName;
             return (
               <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
@@ -86,6 +88,18 @@ export default function BookList({ books, filter, onFilter, onPin, onEdit, onTog
                   <div className="book-title">{book.title}</div>
                   {book.author ? <div className="book-author">{book.author}</div> : null}
                   {suggesterName ? <div className="book-meta">By {suggesterName}</div> : null}
+                  {book.note ? (
+                    <>
+                      <button
+                        className="book-note-toggle"
+                        aria-expanded={isExpanded}
+                        onClick={() => setExpandedId(isExpanded ? null : book.id)}
+                      >
+                        {isExpanded ? "Hide note" : "Why this pick"}
+                      </button>
+                      {isExpanded ? <div className="book-note">{book.note}</div> : null}
+                    </>
+                  ) : null}
                 </div>
                 <div
                   className="book-actions"

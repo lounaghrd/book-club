@@ -207,7 +207,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
-  async function addBook(data: { title: string; author: string }) {
+  async function addBook(data: { title: string; author: string; note: string }) {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
@@ -218,6 +218,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       author: data.author || null,
       suggestedByUserId: currentUserId,
       suggestedByName: currentUser?.name ?? null,
+      note: data.note || null,
       read: false,
       addedAt: Date.now(),
     };
@@ -237,10 +238,10 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     setEditTarget(book);
   }
 
-  async function editBook(data: { title: string; author: string }) {
+  async function editBook(data: { title: string; author: string; note: string }) {
     if (!editTarget) return;
     const id = editTarget.id;
-    const next = { title: data.title, author: data.author || null };
+    const next = { title: data.title, author: data.author || null, note: data.note || null };
     const prevBooks = books;
     setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, ...next } : b)));
     setEditTarget(null);
@@ -394,6 +395,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
         mode="edit"
         initialTitle={editTarget?.title ?? ""}
         initialAuthor={editTarget?.author ?? ""}
+        initialNote={editTarget?.note ?? ""}
         onClose={() => setEditTarget(null)}
         onSubmit={editBook}
       />

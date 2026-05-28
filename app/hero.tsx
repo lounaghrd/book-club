@@ -16,8 +16,13 @@ type Props = {
 
 export default function Hero({ current, book, onReschedule, onEdit, onFinish, onUnpin }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setNoteOpen(false);
+  }, [book?.id]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -89,6 +94,18 @@ export default function Hero({ current, book, onReschedule, onEdit, onFinish, on
       <div className="hero-label">Currently Reading</div>
       <div className="hero-title">{book.title}</div>
       <div className="hero-author">{book.author || "Unknown"}</div>
+      {book.note ? (
+        <div className="hero-note-block">
+          <button
+            className="hero-note-toggle"
+            aria-expanded={noteOpen}
+            onClick={() => setNoteOpen((o) => !o)}
+          >
+            {noteOpen ? "Hide note" : "Why this pick"}
+          </button>
+          {noteOpen ? <div className="hero-note">{book.note}</div> : null}
+        </div>
+      ) : null}
       {days !== null && current?.meetingDate ? (
         <div className="countdown-block" suppressHydrationWarning>
           <div className={`countdown-num ${numClass}`}>{days === 0 ? "0" : Math.abs(days)}</div>

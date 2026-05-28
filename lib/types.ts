@@ -4,6 +4,7 @@ export type Book = {
   author: string | null;
   suggestedByUserId: string | null;
   suggestedByName: string | null;
+  note: string | null;
   read: boolean;
   addedAt: number;
 };
