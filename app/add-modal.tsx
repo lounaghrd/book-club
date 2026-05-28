@@ -4,23 +4,33 @@ import { useEffect, useRef, useState } from "react";
 
 type Props = {
   open: boolean;
+  mode?: "add" | "edit";
+  initialTitle?: string;
+  initialAuthor?: string;
   onClose: () => void;
   onSubmit: (data: { title: string; author: string }) => void;
 };
 
-export default function AddModal({ open, onClose, onSubmit }: Props) {
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
+export default function AddModal({
+  open,
+  mode = "add",
+  initialTitle = "",
+  initialAuthor = "",
+  onClose,
+  onSubmit,
+}: Props) {
+  const [title, setTitle] = useState(initialTitle);
+  const [author, setAuthor] = useState(initialAuthor);
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
-      setTitle("");
-      setAuthor("");
+      setTitle(initialTitle);
+      setAuthor(initialAuthor);
       const t = setTimeout(() => titleRef.current?.focus(), 280);
       return () => clearTimeout(t);
     }
-  }, [open]);
+  }, [open, initialTitle, initialAuthor]);
 
   function submit() {
     const t = title.trim();
@@ -44,7 +54,7 @@ export default function AddModal({ open, onClose, onSubmit }: Props) {
     >
       <div className="modal">
         <div className="modal-handle" />
-        <div className="modal-title">Suggest a Book</div>
+        <div className="modal-title">{mode === "edit" ? "Edit Book" : "Suggest a Book"}</div>
         <div className="field">
           <label>Title</label>
           <input
@@ -73,7 +83,7 @@ export default function AddModal({ open, onClose, onSubmit }: Props) {
             Cancel
           </button>
           <button className="btn" onClick={submit}>
-            Add
+            {mode === "edit" ? "Save" : "Add"}
           </button>
         </div>
       </div>

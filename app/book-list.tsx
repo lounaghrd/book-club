@@ -9,11 +9,12 @@ type Props = {
   filter: Filter;
   onFilter: (f: Filter) => void;
   onPin: (bookId: string) => void;
+  onEdit: (bookId: string) => void;
   onToggleRead: (bookId: string) => void;
   onRemove: (bookId: string) => void;
 };
 
-export default function BookList({ books, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
+export default function BookList({ books, filter, onFilter, onPin, onEdit, onToggleRead, onRemove }: Props) {
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -105,6 +106,7 @@ export default function BookList({ books, filter, onFilter, onPin, onToggleRead,
                     {!book.read ? (
                       <button onClick={() => runAction(() => onPin(book.id))}>Pin book</button>
                     ) : null}
+                    <button onClick={() => runAction(() => onEdit(book.id))}>Edit</button>
                     <button onClick={() => runAction(() => onToggleRead(book.id))}>
                       {book.read ? "Mark unread" : "Mark finished"}
                     </button>

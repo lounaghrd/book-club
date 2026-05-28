@@ -26,6 +26,7 @@ import {
   mapCurrent,
   mapUser,
   renameUser,
+  updateBook,
   updateBookRead,
   upsertCurrent,
 } from "@/lib/api";
@@ -44,6 +45,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [filter, setFilter] = useState<Filter>("available");
   const [addOpen, setAddOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Book | null>(null);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
   // undefined = haven't read localStorage yet (avoids flashing the picker on hydration)
   const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
@@ -229,6 +231,27 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
+  function openEdit(bookId: string) {
+    const book = books.find((b) => b.id === bookId);
+    if (!book) return;
+    setEditTarget(book);
+  }
+
+  async function editBook(data: { title: string; author: string }) {
+    if (!editTarget) return;
+    const id = editTarget.id;
+    const next = { title: data.title, author: data.author || null };
+    const prevBooks = books;
+    setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, ...next } : b)));
+    setEditTarget(null);
+    try {
+      await updateBook(supabase, id, next);
+    } catch (e) {
+      console.error("Failed to edit book", e);
+      setBooks(prevBooks);
+    }
+  }
+
   function openPin(bookId: string) {
     const book = books.find((b) => b.id === bookId);
     if (!book) return;
@@ -353,6 +376,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
           filter={filter}
           onFilter={setFilter}
           onPin={openPin}
+          onEdit={openEdit}
           onToggleRead={toggleRead}
           onRemove={removeBook}
         />
@@ -364,6 +388,14 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       </button>
 
       <AddModal open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addBook} />
+      <AddModal
+        open={!!editTarget}
+        mode="edit"
+        initialTitle={editTarget?.title ?? ""}
+        initialAuthor={editTarget?.author ?? ""}
+        onClose={() => setEditTarget(null)}
+        onSubmit={editBook}
+      />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
       <UserPicker
         open={pickerOpen}

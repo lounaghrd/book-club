@@ -83,6 +83,15 @@ export async function updateBookRead(db: DB, id: string, read: boolean): Promise
   if (error) throw error;
 }
 
+export async function updateBook(
+  db: DB,
+  id: string,
+  fields: { title: string; author: string | null },
+): Promise<void> {
+  const { error } = await db.from("books").update(fields).eq("id", id);
+  if (error) throw error;
+}
+
 export async function deleteBook(db: DB, id: string): Promise<void> {
   const { error } = await db.from("books").delete().eq("id", id);
   if (error) throw error;
