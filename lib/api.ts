@@ -16,6 +16,7 @@ export function mapBook(row: BookRow): Book {
     title: row.title,
     author: row.author,
     suggestedByUserId: row.suggested_by_user_id,
+    suggestedByName: row.suggested_by_name,
     read: row.read,
     addedAt: new Date(row.added_at).getTime(),
   };
@@ -70,6 +71,7 @@ export async function insertBook(db: DB, book: Book): Promise<void> {
     title: book.title,
     author: book.author,
     suggested_by_user_id: book.suggestedByUserId,
+    suggested_by_name: book.suggestedByName,
     read: book.read,
     added_at: new Date(book.addedAt).toISOString(),
   });
@@ -114,4 +116,15 @@ export async function insertUser(db: DB, user: User): Promise<void> {
 export async function deleteUser(db: DB, id: string): Promise<void> {
   const { error } = await db.from("users").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function renameUser(db: DB, id: string, name: string): Promise<void> {
+  const { error } = await db.from("users").update({ name }).eq("id", id);
+  if (error) throw error;
+  // Keep the denormalized snapshot on existing suggestions in sync.
+  const { error: bookErr } = await db
+    .from("books")
+    .update({ suggested_by_name: name })
+    .eq("suggested_by_user_id", id);
+  if (bookErr) throw bookErr;
 }

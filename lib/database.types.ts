@@ -19,6 +19,7 @@ export interface Database {
           title: string;
           author: string | null;
           suggested_by_user_id: string | null;
+          suggested_by_name: string | null;
           read: boolean;
           added_at: string;
         };
@@ -28,6 +29,7 @@ export interface Database {
           title: string;
           author?: string | null;
           suggested_by_user_id?: string | null;
+          suggested_by_name?: string | null;
           read?: boolean;
           added_at?: string;
         };
@@ -37,6 +39,7 @@ export interface Database {
           title?: string;
           author?: string | null;
           suggested_by_user_id?: string | null;
+          suggested_by_name?: string | null;
           read?: boolean;
           added_at?: string;
         };

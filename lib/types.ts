@@ -3,6 +3,7 @@ export type Book = {
   title: string;
   author: string | null;
   suggestedByUserId: string | null;
+  suggestedByName: string | null;
   read: boolean;
   addedAt: number;
 };

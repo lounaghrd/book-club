@@ -22,6 +22,7 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - **App icon** — Dark tile with a centered orange square, generated via `next/og` (`app/icon.tsx` for favicon, `app/apple-icon.tsx` for home-screen)
 - **Book-row kebab menu** — Per-row Pin/Check/X buttons replaced with a single ⋮ that opens a popover styled to match the pinned-book (hero) menu. Available books offer Pin / Mark finished / Delete; read books offer Mark unread / Delete. Read rows un-dim while their menu is open so the menu stays legible.
 - **Artificial user "auth"** — On first visit, a blocking bottom sheet (`app/user-picker.tsx`) asks the visitor to pick their name from a shared list (or add a new one). Selection is persisted to `localStorage` (`bookclub:current_user_id`). A small chip in the header shows the current user and re-opens the picker so anyone can switch. New books auto-attribute to the current user via `books.suggested_by_user_id` (FK to `users`, `ON DELETE SET NULL`). The "Suggested by" input is gone from the add modal. The install prompt is deferred until a user is selected so the two sheets never stack.
+- **User management** — Each picker row has a ⋮ kebab (same pattern as book rows) holding **Rename** and **Remove**. Rename opens an inline edit form and updates the name everywhere it appears. Remove goes through a styled `ConfirmDialog` (`app/confirm-dialog.tsx`) rather than the browser's native `confirm()`. To survive deletion, each book also stores a denormalized `suggested_by_name` snapshot (set on insert, kept in sync on rename via `renameUser` in `lib/api.ts`); the book list renders from this snapshot, so a deleted user's name stays frozen on their past suggestions.
 
 ## Key files
 
@@ -29,7 +30,8 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - `app/book-club.tsx` — main client component; holds state, Realtime subscription, handlers
 - `app/hero.tsx`, `app/book-list.tsx`, `app/add-modal.tsx`, `app/pin-modal.tsx` — UI pieces
 - `app/install-prompt.tsx` — first-visit Add-to-Home-Screen sheet
-- `app/user-picker.tsx` — first-visit (and switch-user) sheet for the artificial-auth flow
+- `app/user-picker.tsx` — first-visit (and switch-user) sheet for the artificial-auth flow; per-row Rename/Remove kebab
+- `app/confirm-dialog.tsx` — styled confirmation dialog (used for removing a user)
 - `app/icon.tsx`, `app/apple-icon.tsx` — generated app icons
 - `app/globals.css` — all styles, ported from the prototype
 - `lib/api.ts` — Supabase queries and row ⇄ app-type mappers
@@ -40,6 +42,7 @@ Shipped and live on Vercel. Passes 1–5 done plus two follow-ups:
 - `supabase/migrations/0001_init.sql` — schema (books, current_reading), RLS, realtime publication
 - `supabase/migrations/0002_replica_identity_full.sql` — sets `REPLICA IDENTITY FULL` so DELETE events include the full old row (otherwise the realtime `club_id` filter drops deletes — only the PK is in `old` by default)
 - `supabase/migrations/0003_users.sql` — adds the `users` table, swaps `books.suggested_by` (text) for `suggested_by_user_id` (FK), and backfills existing freeform attributions into user rows
+- `supabase/migrations/0004_book_suggested_by_name.sql` — adds the denormalized `books.suggested_by_name` snapshot (backfilled from the FK) so a suggester's name survives user deletion; kept in sync on rename
 
 ## Decisions made
 

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@/lib/types";
-import { XIcon } from "./icons";
+import { KebabIcon } from "./icons";
+import ConfirmDialog from "./confirm-dialog";
 
 type Props = {
   open: boolean;
@@ -12,8 +13,11 @@ type Props = {
   onClose: () => void;
   onSelect: (userId: string) => void;
   onAdd: (name: string) => Promise<User | null>;
+  onRename: (userId: string, name: string) => void;
   onDelete: (userId: string) => void;
 };
+
+type Mode = "select" | "add" | "edit";
 
 export default function UserPicker({
   open,
@@ -23,39 +27,70 @@ export default function UserPicker({
   onClose,
   onSelect,
   onAdd,
+  onRename,
   onDelete,
 }: Props) {
-  const [mode, setMode] = useState<"select" | "add">("select");
+  const [mode, setMode] = useState<Mode>("select");
   const [name, setName] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     // First-visit, empty club: jump straight to the add form.
     setMode(users.length === 0 ? "add" : "select");
     setName("");
+    setEditingId(null);
+    setOpenMenuId(null);
+    setPendingDelete(null);
   }, [open, users.length]);
 
   useEffect(() => {
-    if (open && mode === "add") {
+    if (open && (mode === "add" || mode === "edit")) {
       const t = setTimeout(() => inputRef.current?.focus(), 280);
       return () => clearTimeout(t);
     }
   }, [open, mode]);
 
-  async function submitAdd() {
+  useEffect(() => {
+    if (!openMenuId) return;
+    function onDocClick(e: MouseEvent) {
+      if (menuContainerRef.current?.contains(e.target as Node)) return;
+      setOpenMenuId(null);
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, [openMenuId]);
+
+  async function submitForm() {
     const trimmed = name.trim();
     if (!trimmed) {
       inputRef.current?.focus();
+      return;
+    }
+    if (mode === "edit" && editingId) {
+      onRename(editingId, trimmed);
+      setMode("select");
       return;
     }
     const created = await onAdd(trimmed);
     if (created) onSelect(created.id);
   }
 
-  function tryDelete(user: User) {
-    if (!confirm(`Remove ${user.name} from the user list?\n\nTheir past suggestions stay but lose attribution.`)) return;
-    onDelete(user.id);
+  function startRename(user: User) {
+    setOpenMenuId(null);
+    setEditingId(user.id);
+    setName(user.name);
+    setMode("edit");
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    onDelete(pendingDelete.id);
+    setPendingDelete(null);
   }
 
   return (
@@ -71,12 +106,20 @@ export default function UserPicker({
 
         <div className="install-label">Who&apos;s reading</div>
         <div className="install-title">
-          Pick
-          <br />
-          your name
+          {mode === "edit" ? (
+            "Rename"
+          ) : (
+            <>
+              Pick
+              <br />
+              your name
+            </>
+          )}
         </div>
         <div className="install-intro">
-          We&apos;ll tag your suggestions with it. You can switch later from the header.
+          {mode === "edit"
+            ? "Updates the name everywhere it appears, including past suggestions."
+            : "We'll tag your suggestions with it. You can switch later from the header."}
         </div>
 
         {mode === "select" ? (
@@ -84,6 +127,7 @@ export default function UserPicker({
             <div className="user-list">
               {users.map((u) => {
                 const active = u.id === currentUserId;
+                const menuOpen = openMenuId === u.id;
                 return (
                   <div key={u.id} className="user-row">
                     <button
@@ -93,13 +137,34 @@ export default function UserPicker({
                       {u.name}
                       {active ? <span className="user-btn-tag">You</span> : null}
                     </button>
-                    <button
-                      className="icon-btn user-delete-btn"
-                      aria-label={`Remove ${u.name}`}
-                      onClick={() => tryDelete(u)}
+                    <div
+                      className="user-actions"
+                      ref={menuOpen ? menuContainerRef : undefined}
                     >
-                      <XIcon />
-                    </button>
+                      <button
+                        className="icon-btn"
+                        aria-label={`Actions for ${u.name}`}
+                        aria-expanded={menuOpen}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuId(menuOpen ? null : u.id);
+                        }}
+                      >
+                        <KebabIcon />
+                      </button>
+                      <div className={`user-menu${menuOpen ? " open" : ""}`}>
+                        <button onClick={() => startRename(u)}>Rename</button>
+                        <button
+                          className="danger"
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setPendingDelete(u);
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -107,6 +172,11 @@ export default function UserPicker({
             <button className="btn btn-ghost user-add-toggle" onClick={() => setMode("add")}>
               + Add someone
             </button>
+            {dismissible ? (
+              <button className="btn btn-ghost user-picker-dismiss" onClick={onClose}>
+                Cancel
+              </button>
+            ) : null}
           </>
         ) : (
           <>
@@ -118,7 +188,7 @@ export default function UserPicker({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") submitAdd();
+                  if (e.key === "Enter") submitForm();
                 }}
                 placeholder="Your first name"
                 autoComplete="off"
@@ -130,19 +200,22 @@ export default function UserPicker({
                   Back
                 </button>
               ) : null}
-              <button className="btn" onClick={submitAdd}>
-                Add
+              <button className="btn" onClick={submitForm}>
+                {mode === "edit" ? "Save" : "Add"}
               </button>
             </div>
           </>
         )}
-
-        {dismissible && mode === "select" ? (
-          <button className="btn btn-ghost user-picker-dismiss" onClick={onClose}>
-            Cancel
-          </button>
-        ) : null}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title={`Remove ${pendingDelete?.name ?? ""}?`}
+        message="They'll be taken off the picker list. Their past book suggestions keep their name."
+        confirmLabel="Remove"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

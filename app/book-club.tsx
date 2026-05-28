@@ -25,6 +25,7 @@ import {
   mapBook,
   mapCurrent,
   mapUser,
+  renameUser,
   updateBookRead,
   upsertCurrent,
 } from "@/lib/api";
@@ -167,6 +168,24 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
+  async function changeUserName(userId: string, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const prevUsers = users;
+    const prevBooks = books;
+    setUsers((us) => us.map((u) => (u.id === userId ? { ...u, name: trimmed } : u)));
+    setBooks((bs) =>
+      bs.map((b) => (b.suggestedByUserId === userId ? { ...b, suggestedByName: trimmed } : b)),
+    );
+    try {
+      await renameUser(supabase, userId, trimmed);
+    } catch (e) {
+      console.error("Failed to rename user", e);
+      setUsers(prevUsers);
+      setBooks(prevBooks);
+    }
+  }
+
   async function removeUser(userId: string) {
     const prev = users;
     setUsers((us) => us.filter((u) => u.id !== userId));
@@ -196,6 +215,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       title: data.title,
       author: data.author || null,
       suggestedByUserId: currentUserId,
+      suggestedByName: currentUser?.name ?? null,
       read: false,
       addedAt: Date.now(),
     };
@@ -330,7 +350,6 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
 
         <BookList
           books={listBooks}
-          users={users}
           filter={filter}
           onFilter={setFilter}
           onPin={openPin}
@@ -354,6 +373,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
         onClose={() => setPickerOpen(false)}
         onSelect={selectUser}
         onAdd={addUser}
+        onRename={changeUserName}
         onDelete={removeUser}
       />
       {showInstallPrompt ? <InstallPrompt /> : null}

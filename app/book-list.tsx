@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { Book, Filter, User } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import type { Book, Filter } from "@/lib/types";
 import { KebabIcon } from "./icons";
 
 type Props = {
   books: Book[];
-  users: User[];
   filter: Filter;
   onFilter: (f: Filter) => void;
   onPin: (bookId: string) => void;
@@ -14,8 +13,7 @@ type Props = {
   onRemove: (bookId: string) => void;
 };
 
-export default function BookList({ books, users, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
-  const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
+export default function BookList({ books, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
 
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -80,9 +78,7 @@ export default function BookList({ books, users, filter, onFilter, onPin, onTogg
         ) : (
           filtered.map((book) => {
             const isOpen = openMenuId === book.id;
-            const suggesterName = book.suggestedByUserId
-              ? usersById.get(book.suggestedByUserId)?.name ?? null
-              : null;
+            const suggesterName = book.suggestedByName;
             return (
               <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
                 <div className="book-info">
