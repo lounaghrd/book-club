@@ -764,7 +764,7 @@ header {
 .user-row {
   display: flex;
   gap: 8px;
-  align-items: stretch;
+  align-items: center;
 }
 .user-btn {
   flex: 1;
@@ -804,9 +804,6 @@ header {
 .user-actions {
   position: relative;
   flex-shrink: 0;
-}
-.user-actions .icon-btn {
-  height: 100%;
 }
 .user-menu {
   position: absolute;
@@ -859,11 +856,6 @@ header {
 }
 .user-add-field {
   margin-bottom: 6px;
-}
-.user-picker-dismiss {
-  width: 100%;
-  margin-top: 10px;
-  padding: 13px;
 }
 
 /* Confirm dialog */

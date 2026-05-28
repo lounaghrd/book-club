@@ -172,11 +172,6 @@ export default function UserPicker({
             <button className="btn btn-ghost user-add-toggle" onClick={() => setMode("add")}>
               + Add someone
             </button>
-            {dismissible ? (
-              <button className="btn btn-ghost user-picker-dismiss" onClick={onClose}>
-                Cancel
-              </button>
-            ) : null}
           </>
         ) : (
           <>
