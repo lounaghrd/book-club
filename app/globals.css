@@ -477,6 +477,15 @@ header {
   padding: 8px 10px;
   font-size: 10px;
 }
+.btn-danger {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.btn-danger:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
 
 .empty {
   padding: 36px 16px;
@@ -707,6 +716,203 @@ header {
 .install-cta {
   width: 100%;
   padding: 16px;
+}
+
+/* User chip (in header) */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 7px 11px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+  font-variation-settings: "wdth" 85;
+}
+.user-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.user-chip:active {
+  transform: scale(0.97);
+}
+.user-chip-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* User picker sheet */
+.user-picker-sheet {
+  padding-bottom: 22px;
+}
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.user-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.user-btn {
+  flex: 1;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.user-btn:hover {
+  border-color: var(--border-strong);
+}
+.user-btn:active {
+  transform: scale(0.99);
+}
+.user-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.user-btn-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 3px 6px;
+}
+.user-actions {
+  position: relative;
+  flex-shrink: 0;
+}
+/* Match the kebab to the boxed row height (rows here are bordered buttons,
+   unlike the borderless book rows where the 36px square sits centered). */
+.user-actions .icon-btn {
+  height: 100%;
+}
+.user-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  min-width: 160px;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+.user-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.user-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 13px 16px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.user-menu button:last-child {
+  border-bottom: none;
+}
+.user-menu button:hover {
+  background: var(--bg);
+}
+.user-menu button.danger {
+  color: var(--accent);
+}
+.user-add-toggle {
+  width: 100%;
+  padding: 13px;
+}
+.user-add-field {
+  margin-bottom: 6px;
+}
+
+/* Confirm dialog */
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s;
+}
+.confirm-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.confirm-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  width: 100%;
+  max-width: 360px;
+  padding: 24px 22px;
+  transform: translateY(8px);
+  transition: transform 0.18s cubic-bezier(0.32, 0.72, 0.32, 1);
+}
+.confirm-backdrop.open .confirm-dialog {
+  transform: translateY(0);
+}
+.confirm-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variation-settings: "wdth" 85;
+  margin-bottom: 10px;
+}
+.confirm-message {
+  font-size: 14px;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 22px;
+}
+.confirm-actions .btn {
+  flex: 1;
+  padding: 13px;
 }
 
 @keyframes fadeUp {

@@ -14,6 +14,7 @@ type Props = {
 };
 
 export default function BookList({ books, filter, onFilter, onPin, onToggleRead, onRemove }: Props) {
+
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
 
@@ -77,12 +78,13 @@ export default function BookList({ books, filter, onFilter, onPin, onToggleRead,
         ) : (
           filtered.map((book) => {
             const isOpen = openMenuId === book.id;
+            const suggesterName = book.suggestedByName;
             return (
               <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
                 <div className="book-info">
                   <div className="book-title">{book.title}</div>
                   {book.author ? <div className="book-author">{book.author}</div> : null}
-                  {book.suggestedBy ? <div className="book-meta">By {book.suggestedBy}</div> : null}
+                  {suggesterName ? <div className="book-meta">By {suggesterName}</div> : null}
                 </div>
                 <div
                   className="book-actions"
