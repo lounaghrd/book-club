@@ -22,13 +22,14 @@ Shipped and live on Vercel. Passes 1–5 done plus several follow-ups:
 - **App icon** — Dark tile with a centered orange square, generated via `next/og` (`app/icon.tsx` for favicon, `app/apple-icon.tsx` for home-screen)
 - **Book-row kebab menu** — Per-row Pin/Check/X buttons replaced with a single ⋮ that opens a popover styled to match the pinned-book (hero) menu. Available books offer Pin / Mark finished / Delete; read books offer Mark unread / Delete. Read rows un-dim while their menu is open so the menu stays legible.
 - **Artificial user "auth"** — On first visit, a blocking bottom sheet (`app/user-picker.tsx`) asks the visitor to pick their name from a shared list (or add a new one). Selection is persisted to `localStorage` (`bookclub:current_user_id`). A small chip in the header shows the current user and re-opens the picker so anyone can switch. New books auto-attribute to the current user via `books.suggested_by_user_id` (FK to `users`, `ON DELETE SET NULL`). The "Suggested by" input is gone from the add modal. The install prompt is deferred until a user is selected so the two sheets never stack.
+- **Edit a book** — Both reading-list rows and the pinned-book hero kebab carry an **Edit** action that reopens the suggest-a-book modal in "edit" mode, prefilled with the current title/author ("Edit Book" header, "Save" button). `add-modal.tsx` is generalized to handle both add and edit via a `mode` prop plus optional initial values. Edits use the same optimistic-update-then-write-then-rollback flow (`updateBook` in `lib/api.ts`) and propagate to other clients through the existing Realtime `UPDATE` subscription. Only title/author are editable; `read`, suggester, and `addedAt` stay managed by their own actions.
 - **User management** — Each picker row has a ⋮ kebab (same pattern as book rows) holding **Rename** and **Remove**. Rename opens an inline edit form and updates the name everywhere it appears. Remove goes through a styled `ConfirmDialog` (`app/confirm-dialog.tsx`) rather than the browser's native `confirm()`. To survive deletion, each book also stores a denormalized `suggested_by_name` snapshot (set on insert, kept in sync on rename via `renameUser` in `lib/api.ts`); the book list renders from this snapshot, so a deleted user's name stays frozen on their past suggestions.
 
 ## Key files
 
 - `app/page.tsx` — server component, fetches initial books + current reading
 - `app/book-club.tsx` — main client component; holds state, Realtime subscription, handlers
-- `app/hero.tsx`, `app/book-list.tsx`, `app/add-modal.tsx`, `app/pin-modal.tsx` — UI pieces
+- `app/hero.tsx`, `app/book-list.tsx`, `app/add-modal.tsx`, `app/pin-modal.tsx` — UI pieces (`add-modal.tsx` is dual-mode: add and edit)
 - `app/install-prompt.tsx` — first-visit Add-to-Home-Screen sheet
 - `app/user-picker.tsx` — first-visit (and switch-user) sheet for the artificial-auth flow; per-row Rename/Remove kebab
 - `app/confirm-dialog.tsx` — styled confirmation dialog (used for removing a user)
