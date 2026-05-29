@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
-import type { Book, CurrentReading, User } from "@/lib/types";
+import type { Book, CurrentReading, User, Vote } from "@/lib/types";
 import { CLUB_ID } from "@/lib/config";
 
 // @supabase/ssr bundles its own SupabaseClient — derive DB from its factory so both
@@ -9,6 +9,7 @@ type DB = ReturnType<typeof createBrowserClient<Database>>;
 type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
 
 export function mapBook(row: BookRow): Book {
   return {
@@ -33,6 +34,10 @@ export function mapUser(row: UserRow): User {
     name: row.name,
     createdAt: new Date(row.created_at).getTime(),
   };
+}
+
+export function mapVote(row: VoteRow): Vote {
+  return { id: row.id, bookId: row.book_id, userId: row.user_id };
 }
 
 export async function fetchBooks(db: DB): Promise<Book[]> {
@@ -63,6 +68,31 @@ export async function fetchUsers(db: DB): Promise<User[]> {
     .order("created_at", { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapUser);
+}
+
+export async function fetchVotes(db: DB): Promise<Vote[]> {
+  const { data, error } = await db.from("votes").select("*").eq("club_id", CLUB_ID);
+  if (error) throw error;
+  return (data ?? []).map(mapVote);
+}
+
+export async function insertVote(db: DB, vote: Vote): Promise<void> {
+  const { error } = await db.from("votes").insert({
+    id: vote.id,
+    club_id: CLUB_ID,
+    book_id: vote.bookId,
+    user_id: vote.userId,
+  });
+  if (error) throw error;
+}
+
+export async function deleteVote(db: DB, bookId: string, userId: string): Promise<void> {
+  const { error } = await db
+    .from("votes")
+    .delete()
+    .eq("book_id", bookId)
+    .eq("user_id", userId);
+  if (error) throw error;
 }
 
 export async function insertBook(db: DB, book: Book): Promise<void> {

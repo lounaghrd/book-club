@@ -20,4 +20,10 @@ export type User = {
   createdAt: number;
 };
 
+export type Vote = {
+  id: string;
+  bookId: string;
+  userId: string;
+};
+
 export type Filter = "available" | "read";

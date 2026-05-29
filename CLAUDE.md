@@ -16,7 +16,8 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 ## Features
 
 - **Currently reading (hero):** pinned book with a days-until-meeting countdown and meeting date. Tapping it (or the expand button) opens the **book card** — actions live there, not on the hero.
-- **Reading list:** suggest a book (title + optional author + optional note); filter by "Up next" (unread) and "Read". Each row shows title/author/suggester plus an expand button; tapping the row or button opens the **book card**. No per-row kebab — actions live in the card.
+- **Reading list:** suggest a book (title + optional author + optional note); filter by "Up next" (unread) and "Read". Each row shows title/author/suggester, an **upvote pill** (arrow + count), and an expand button; tapping the row or button opens the **book card**. No per-row kebab — actions live in the card. "Up next" is sorted by upvote count (most-wanted first, newest as tie-break); "Read" stays newest-first.
+- **Upvotes:** upvote-only (no downvotes), one vote per picked user per book. The pill fills with the accent colour once you've voted; tapping again removes your vote. Votes live in a `votes` table keyed by `(book_id, user_id)`; counts and ranking are derived client-side from the flat vote list. Like identity, this is soft dedup — *not* a security boundary (new browser/private window = new vote). Voting while no user is picked opens the picker first. Shown on both the list rows and the book card.
 - **Book card:** a bottom-sheet detail view (`book-card.tsx`) opened from a list row or the hero. Shows title, author, who suggested it, and the suggester's note ("No note yet" when empty). A kebab in the card header (reuses `.hero-menu-btn`) toggles the actions, which reveal **inline at the bottom of the sheet** (`.book-card-menu`) rather than as a floating dropdown — the card is bottom-anchored, so an inline reveal grows upward and never clips off-screen. Actions are context-aware: pinned book → change date / edit / mark finished / unpin; list book → pin (if unread) / edit / mark read-or-unread / delete. Every action closes the card (`runCardAction` clears `cardBookId` first); edit/pin/change-date then open their own modal.
 - **Identity ("pick your name"):** first-visit blocking sheet (`user-picker.tsx`) to choose or add a name, persisted to `localStorage` (`bookclub:current_user_id`); a header chip re-opens it to switch. New books attribute to the current user. Per-row Rename / Remove (Remove confirms via `confirm-dialog.tsx`). Not a security boundary — see Decisions.
 - **Durable attribution:** books store both `suggested_by_user_id` (FK; renames propagate) and a `suggested_by_name` snapshot (survives user deletion). The list renders the snapshot.
@@ -38,7 +39,7 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 - `app/globals.css` — all styles, ported from the prototype
 - `lib/api.ts` — Supabase queries and row ⇄ app-type mappers
 - `lib/supabase/client.ts` / `server.ts` — browser + server clients
-- `lib/types.ts` — `Book`, `CurrentReading`, `User`, `Filter`
+- `lib/types.ts` — `Book`, `CurrentReading`, `User`, `Vote`, `Filter`
 - `lib/database.types.ts` — hand-written DB types (mirrors `supabase gen types typescript`)
 - `lib/config.ts` — env var re-exports
 - `supabase/migrations/0001_init.sql` — schema (books, current_reading), RLS, realtime publication
@@ -46,6 +47,7 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 - `supabase/migrations/0003_users.sql` — adds the `users` table, swaps `books.suggested_by` (text) for `suggested_by_user_id` (FK), and backfills existing freeform attributions into user rows
 - `supabase/migrations/0004_book_suggested_by_name.sql` — adds the denormalized `books.suggested_by_name` snapshot (backfilled from the FK) so a suggester's name survives user deletion; kept in sync on rename
 - `supabase/migrations/0005_book_note.sql` — adds the optional `books.note` free-text column (why a book was suggested)
+- `supabase/migrations/0006_votes.sql` — adds the `votes` table (`(book_id, user_id)` unique, FKs cascade-delete from books/users), with RLS, realtime publication, and `REPLICA IDENTITY FULL` (same DELETE-filter reasoning as 0002)
 
 ## Decisions made
 
@@ -56,6 +58,7 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 - **Optimistic UI everywhere:** local state updates first, then Supabase write; on failure we roll back. Realtime echoes are deduped by id.
 - **Database types:** hand-written in `lib/database.types.ts` to avoid Supabase CLI dependency. Regenerate via `supabase gen types typescript --project-id <id>` if the schema changes.
 - **Destructive actions behind a menu:** book-row actions live behind a kebab rather than as always-visible icons, to make Delete and Pin harder to mis-tap. Style is shared with the hero menu — if you touch one, keep them visually consistent.
+- **Upvotes (added after v1):** the spec originally listed voting as out of scope; we revisited it. Chose **upvote-only** (downvotes feel pointed in a small friendly group) with **soft per-user dedup** keyed on the picked user, and **"Up next" sorted by score**. Vote integrity is intentionally weak — it rides the same not-a-security-boundary identity model. A separate `votes` table (rather than a counter column on `books`) keeps per-user dedup and "did I vote?" cheap and lets renames/deletes cascade naturally.
 
 ## Setup, env & deploy
 

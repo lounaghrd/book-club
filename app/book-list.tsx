@@ -1,19 +1,38 @@
 "use client";
 
 import type { Book, Filter } from "@/lib/types";
-import { ExpandIcon } from "./icons";
+import { ExpandIcon, UpvoteIcon } from "./icons";
 
 type Props = {
   books: Book[];
   filter: Filter;
   onFilter: (f: Filter) => void;
   onOpen: (bookId: string) => void;
+  voteCounts: Map<string, number>;
+  myVotes: Set<string>;
+  onVote: (bookId: string) => void;
 };
 
-export default function BookList({ books, filter, onFilter, onOpen }: Props) {
+export default function BookList({
+  books,
+  filter,
+  onFilter,
+  onOpen,
+  voteCounts,
+  myVotes,
+  onVote,
+}: Props) {
   const filtered = books
     .filter((b) => (filter === "available" ? !b.read : b.read))
-    .sort((a, b) => b.addedAt - a.addedAt);
+    // "Up next" ranks by upvotes (most-wanted first), newest as the tie-break;
+    // "Read" stays newest-first.
+    .sort((a, b) => {
+      if (filter === "available") {
+        const diff = (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return b.addedAt - a.addedAt;
+    });
 
   const totalBooks = books.length;
 
@@ -56,6 +75,8 @@ export default function BookList({ books, filter, onFilter, onOpen }: Props) {
         ) : (
           filtered.map((book) => {
             const suggesterName = book.suggestedByName;
+            const count = voteCounts.get(book.id) ?? 0;
+            const voted = myVotes.has(book.id);
             return (
               <div
                 key={book.id}
@@ -68,6 +89,18 @@ export default function BookList({ books, filter, onFilter, onOpen }: Props) {
                   {suggesterName ? <div className="book-meta">By {suggesterName}</div> : null}
                 </div>
                 <div className="book-actions">
+                  <button
+                    className={`vote-btn${voted ? " voted" : ""}`}
+                    aria-label={voted ? `Remove your upvote for ${book.title}` : `Upvote ${book.title}`}
+                    aria-pressed={voted}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onVote(book.id);
+                    }}
+                  >
+                    <UpvoteIcon />
+                    <span className="vote-count">{count}</span>
+                  </button>
                   <button
                     className="icon-btn"
                     aria-label={`Open details for ${book.title}`}

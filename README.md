@@ -13,7 +13,7 @@ Stack: Next.js 15 (App Router) · Supabase (Postgres + Realtime) · Bricolage Gr
 
 2. **Create a Supabase project** at https://supabase.com.
 
-3. **Run the schema** in the Supabase SQL editor — copy/paste `supabase/migrations/0001_init.sql` then `supabase/migrations/0002_replica_identity_full.sql`. Together they create the `books` and `current_reading` tables, enable RLS with open-link policies, add both tables to the realtime publication, and set `REPLICA IDENTITY FULL` so realtime DELETE events carry enough info to pass the club filter.
+3. **Run the schema** in the Supabase SQL editor — copy/paste the migrations in `supabase/migrations/` in order (`0001` through `0006`). Together they create the `books`, `current_reading`, `users`, and `votes` tables, enable RLS with open-link policies, add the tables to the realtime publication, and set `REPLICA IDENTITY FULL` so realtime DELETE events carry enough info to pass the club filter.
 
 4. **Seed a club id**. The schema treats `club_id` as required so we're multi-club ready, but v1 hardcodes one. Pick any UUID — e.g. run in the SQL editor:
    ```sql

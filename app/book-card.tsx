@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Book } from "@/lib/types";
-import { KebabIcon } from "./icons";
+import { KebabIcon, UpvoteIcon } from "./icons";
 
 type Props = {
   book: Book | null;
   isPinned: boolean;
+  voteCount: number;
+  hasVoted: boolean;
+  onVote: () => void;
   onClose: () => void;
   onPin: () => void;
   onReschedule: () => void;
@@ -20,6 +23,9 @@ type Props = {
 export default function BookCard({
   book,
   isPinned,
+  voteCount,
+  hasVoted,
+  onVote,
   onClose,
   onPin,
   onReschedule,
@@ -33,19 +39,26 @@ export default function BookCard({
   // Remember the last shown book so its content stays rendered while the sheet
   // animates closed (book goes null the instant we close — without this the
   // card would slide out blank).
-  const [snapshot, setSnapshot] = useState<{ book: Book; isPinned: boolean } | null>(null);
+  const [snapshot, setSnapshot] = useState<{
+    book: Book;
+    isPinned: boolean;
+    voteCount: number;
+    hasVoted: boolean;
+  } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const open = !!book;
 
   useEffect(() => {
-    if (book) setSnapshot({ book, isPinned });
-  }, [book, isPinned]);
+    if (book) setSnapshot({ book, isPinned, voteCount, hasVoted });
+  }, [book, isPinned, voteCount, hasVoted]);
 
   // Use the live book while open, the snapshot while closing.
   const display = book ?? snapshot?.book ?? null;
   const displayPinned = book ? isPinned : snapshot?.isPinned ?? false;
+  const displayVoteCount = book ? voteCount : snapshot?.voteCount ?? 0;
+  const displayVoted = book ? hasVoted : snapshot?.hasVoted ?? false;
 
   // Reset the kebab whenever the card opens/closes or switches books.
   useEffect(() => {
@@ -98,6 +111,24 @@ export default function BookCard({
             {display.suggestedByName ? (
               <div className="book-card-suggester">Suggested by {display.suggestedByName}</div>
             ) : null}
+
+            <div className="book-card-vote">
+              <button
+                className={`vote-btn${displayVoted ? " voted" : ""}`}
+                aria-label={displayVoted ? "Remove your upvote" : "Upvote this book"}
+                aria-pressed={displayVoted}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onVote();
+                }}
+              >
+                <UpvoteIcon />
+                <span className="vote-count">{displayVoteCount}</span>
+              </button>
+              <span className="book-card-vote-label">
+                {displayVoteCount === 1 ? "1 upvote" : `${displayVoteCount} upvotes`}
+              </span>
+            </div>
 
             <div className="book-card-note-label">Why this book</div>
             <div className={`book-card-note${display.note ? "" : " empty"}`}>

@@ -442,6 +442,49 @@ header {
   height: 15px;
 }
 
+/* Upvote pill: arrow + count. Outlined by default, fills with the accent once
+   the current user has voted. Shared by the list rows and the book card. */
+.vote-btn {
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.vote-btn:active {
+  transform: scale(0.94);
+}
+.vote-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.vote-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.vote-count {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.vote-btn.voted {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.vote-btn.voted:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+}
+
 /* Buttons */
 .btn {
   background: var(--text);
@@ -683,6 +726,19 @@ header {
 .book-card-note.empty {
   color: var(--muted);
   font-style: italic;
+}
+.book-card-vote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.book-card-vote-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 /* Actions revealed inline by the card's kebab. Inline (not a floating dropdown)
