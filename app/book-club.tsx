@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddModal from "./add-modal";
+import BookCard from "./book-card";
 import BookList from "./book-list";
 import Hero from "./hero";
 import InstallPrompt from "./install-prompt";
@@ -47,6 +48,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
+  const [cardBookId, setCardBookId] = useState<string | null>(null);
   // undefined = haven't read localStorage yet (avoids flashing the picker on hydration)
   const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -142,6 +144,10 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
   const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) ?? null : null;
+  // Derive the open card's book from live state so realtime edits flow through and a
+  // deleted book closes the card automatically.
+  const cardBook = cardBookId ? books.find((b) => b.id === cardBookId) ?? null : null;
+  const cardIsPinned = !!cardBook && cardBook.id === current?.bookId;
 
   function selectUser(userId: string) {
     setCurrentUserId(userId);
@@ -207,7 +213,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
-  async function addBook(data: { title: string; author: string }) {
+  async function addBook(data: { title: string; author: string; note: string }) {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
@@ -218,6 +224,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       author: data.author || null,
       suggestedByUserId: currentUserId,
       suggestedByName: currentUser?.name ?? null,
+      note: data.note || null,
       read: false,
       addedAt: Date.now(),
     };
@@ -237,10 +244,10 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     setEditTarget(book);
   }
 
-  async function editBook(data: { title: string; author: string }) {
+  async function editBook(data: { title: string; author: string; note: string }) {
     if (!editTarget) return;
     const id = editTarget.id;
-    const next = { title: data.title, author: data.author || null };
+    const next = { title: data.title, author: data.author || null, note: data.note || null };
     const prevBooks = books;
     setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, ...next } : b)));
     setEditTarget(null);
@@ -340,6 +347,13 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
+  // Card actions: close the card first so sheets never stack, then run the existing
+  // handler (Edit/Pin/Change-date open their own modal; the rest act in place).
+  function runCardAction(action: () => void) {
+    setCardBookId(null);
+    action();
+  }
+
   // Only surface the install prompt once a user is selected, so two sheets don't stack.
   const showInstallPrompt = currentUserId !== undefined && currentUserId !== null && !pickerOpen;
 
@@ -366,20 +380,14 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
         <Hero
           current={current}
           book={currentBook}
-          onReschedule={openReschedule}
-          onEdit={() => currentBook && openEdit(currentBook.id)}
-          onFinish={finishCurrent}
-          onUnpin={unpin}
+          onOpen={() => currentBook && setCardBookId(currentBook.id)}
         />
 
         <BookList
           books={listBooks}
           filter={filter}
           onFilter={setFilter}
-          onPin={openPin}
-          onEdit={openEdit}
-          onToggleRead={toggleRead}
-          onRemove={removeBook}
+          onOpen={setCardBookId}
         />
       </div>
 
@@ -388,12 +396,26 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
         Suggest a book
       </button>
 
+      <BookCard
+        book={cardBook}
+        isPinned={cardIsPinned}
+        onClose={() => setCardBookId(null)}
+        onPin={() => cardBook && runCardAction(() => openPin(cardBook.id))}
+        onReschedule={() => runCardAction(openReschedule)}
+        onEdit={() => cardBook && runCardAction(() => openEdit(cardBook.id))}
+        onFinish={() => runCardAction(finishCurrent)}
+        onToggleRead={() => cardBook && runCardAction(() => toggleRead(cardBook.id))}
+        onUnpin={() => runCardAction(unpin)}
+        onRemove={() => cardBook && runCardAction(() => removeBook(cardBook.id))}
+      />
+
       <AddModal open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addBook} />
       <AddModal
         open={!!editTarget}
         mode="edit"
         initialTitle={editTarget?.title ?? ""}
         initialAuthor={editTarget?.author ?? ""}
+        initialNote={editTarget?.note ?? ""}
         onClose={() => setEditTarget(null)}
         onSubmit={editBook}
       />

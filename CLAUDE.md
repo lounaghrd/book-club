@@ -15,11 +15,13 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 
 ## Features
 
-- **Currently reading (hero):** pinned book with a days-until-meeting countdown and meeting date. Kebab menu: change date / edit / mark finished / unpin.
-- **Reading list:** suggest a book (title + optional author); filter by "Up next" (unread) and "Read". Per-row kebab: pin / edit / mark read-or-unread / delete. Hero and row menus share styling — keep them consistent.
+- **Currently reading (hero):** pinned book with a days-until-meeting countdown and meeting date. Tapping it (or the expand button) opens the **book card** — actions live there, not on the hero.
+- **Reading list:** suggest a book (title + optional author + optional note); filter by "Up next" (unread) and "Read". Each row shows title/author/suggester plus an expand button; tapping the row or button opens the **book card**. No per-row kebab — actions live in the card.
+- **Book card:** a bottom-sheet detail view (`book-card.tsx`) opened from a list row or the hero. Shows title, author, who suggested it, and the suggester's note ("No note yet" when empty). A kebab in the card header (reuses `.hero-menu-btn`) toggles the actions, which reveal **inline at the bottom of the sheet** (`.book-card-menu`) rather than as a floating dropdown — the card is bottom-anchored, so an inline reveal grows upward and never clips off-screen. Actions are context-aware: pinned book → change date / edit / mark finished / unpin; list book → pin (if unread) / edit / mark read-or-unread / delete. Edit/pin/change-date close the card and open their own modal; the rest act in place.
 - **Identity ("pick your name"):** first-visit blocking sheet (`user-picker.tsx`) to choose or add a name, persisted to `localStorage` (`bookclub:current_user_id`); a header chip re-opens it to switch. New books attribute to the current user. Per-row Rename / Remove (Remove confirms via `confirm-dialog.tsx`). Not a security boundary — see Decisions.
 - **Durable attribution:** books store both `suggested_by_user_id` (FK; renames propagate) and a `suggested_by_name` snapshot (survives user deletion). The list renders the snapshot.
-- **Edit a book:** `add-modal.tsx` is dual-mode (add / edit); only title and author are editable. Optimistic update via `updateBook` in `lib/api.ts`.
+- **Suggestion note:** an optional free-text note on *why* a book was suggested (`books.note`). Set when suggesting, editable via the edit modal, displayed only inside the book card.
+- **Edit a book:** `add-modal.tsx` is dual-mode (add / edit); title, author, and the note are editable. Optimistic update via `updateBook` in `lib/api.ts`.
 - **Install prompt:** "Add to Home Screen" sheet, deferred until a user is picked. Cadence and dismissal rules live in `app/install-prompt.tsx`.
 - **App icon:** generated via `next/og` — `app/icon.tsx` (favicon) and `app/apple-icon.tsx` (home-screen).
 - **Realtime:** Supabase subscriptions keep all clients in sync within ~1s.
@@ -28,7 +30,7 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 
 - `app/page.tsx` — server component, fetches initial books + current reading
 - `app/book-club.tsx` — main client component; holds state, Realtime subscription, handlers
-- `app/hero.tsx`, `app/book-list.tsx`, `app/add-modal.tsx`, `app/pin-modal.tsx` — UI pieces (`add-modal.tsx` is dual-mode: add and edit)
+- `app/hero.tsx`, `app/book-list.tsx`, `app/add-modal.tsx`, `app/pin-modal.tsx`, `app/book-card.tsx` — UI pieces (`add-modal.tsx` is dual-mode: add and edit; `book-card.tsx` is the shared detail sheet for hero + list, with context-aware kebab actions)
 - `app/install-prompt.tsx` — first-visit Add-to-Home-Screen sheet
 - `app/user-picker.tsx` — first-visit (and switch-user) sheet for the artificial-auth flow; per-row Rename/Remove kebab
 - `app/confirm-dialog.tsx` — styled confirmation dialog (used for removing a user)
@@ -43,6 +45,7 @@ Shipped and live on Vercel. Current behavior below; build history is in git.
 - `supabase/migrations/0002_replica_identity_full.sql` — sets `REPLICA IDENTITY FULL` so DELETE events include the full old row (otherwise the realtime `club_id` filter drops deletes — only the PK is in `old` by default)
 - `supabase/migrations/0003_users.sql` — adds the `users` table, swaps `books.suggested_by` (text) for `suggested_by_user_id` (FK), and backfills existing freeform attributions into user rows
 - `supabase/migrations/0004_book_suggested_by_name.sql` — adds the denormalized `books.suggested_by_name` snapshot (backfilled from the FK) so a suggester's name survives user deletion; kept in sync on rename
+- `supabase/migrations/0005_book_note.sql` — adds the optional `books.note` free-text column (why a book was suggested)
 
 ## Decisions made
 
@@ -73,6 +76,7 @@ Use `npm run dev` for manual checks.
 
 - **Realtime + DELETE + filter:** `club_id=eq.<uuid>` filters require `REPLICA IDENTITY FULL` on the table; otherwise DELETE events arrive without `club_id` and get filtered out. Migration `0002` handles this — don't drop it.
 - **`createClient` is async on the server:** `lib/supabase/server.ts` returns a Promise because it awaits `cookies()`. Always `await createClient()` in server components.
+- **Book-card actions are inline, not a dropdown:** the card is a bottom-anchored sheet, so the kebab reveals actions inline at the bottom (`.book-card-menu`) — a floating `.hero-menu`-style dropdown clips off the bottom of the screen when the kebab sits low. Don't "consolidate" it back into the hero/list dropdown pattern.
 - **PR timing:** if you push commits after a PR is merged, they don't land in production — open a new PR. Confirm "no new commits since merge" before clicking Merge.
 - **Install prompt re-test:** to see it again on a device, clear the `bookclub:install_done` and `bookclub:install_last_prompted` keys from `localStorage`, or open in a private window. (Once shown it waits 20s; clearing only `install_last_prompted` forces the weekly re-prompt to fire on the next visit.)
 - **Reset the picked user:** clear `bookclub:current_user_id` from `localStorage` (or use a private window) to re-trigger the first-visit picker. Picker reopens automatically if the chosen user is deleted from another device.

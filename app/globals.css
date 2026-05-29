@@ -603,7 +603,21 @@ header {
   color: var(--text);
   transition: border-color 0.15s;
 }
-.field input:focus {
+.field textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+  resize: vertical;
+  min-height: 76px;
+  transition: border-color 0.15s;
+}
+.field input:focus,
+.field textarea:focus {
   outline: none;
   border-color: var(--text);
 }
@@ -620,6 +634,104 @@ header {
 .modal-actions .btn {
   flex: 1;
   padding: 14px;
+}
+
+/* Book detail card (bottom sheet) */
+.book-card {
+  position: relative;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.book-card-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-variation-settings: "wdth" 88;
+  padding-right: 44px;
+  word-break: break-word;
+}
+.book-card-author {
+  font-size: 15px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+.book-card-suggester {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+.book-card-note-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 22px;
+  margin-bottom: 8px;
+}
+.book-card-note {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.book-card-note.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* Actions revealed inline by the card's kebab. Inline (not a floating dropdown)
+   so they can never clip off the bottom of the sheet. */
+.book-card-menu {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease;
+}
+.book-card-menu.open {
+  margin-top: 22px;
+  max-height: 320px;
+  opacity: 1;
+}
+.book-card-menu-inner {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+}
+.book-card-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.book-card-menu button:last-child {
+  border-bottom: none;
+}
+.book-card-menu button:hover {
+  background: var(--bg);
+}
+.book-card-menu button.danger {
+  color: var(--accent);
+}
+
+.hero-clickable,
+.book-clickable {
+  cursor: pointer;
 }
 
 /* Install prompt */

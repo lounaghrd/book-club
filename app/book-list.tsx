@@ -1,39 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { Book, Filter } from "@/lib/types";
-import { KebabIcon } from "./icons";
+import { ExpandIcon } from "./icons";
 
 type Props = {
   books: Book[];
   filter: Filter;
   onFilter: (f: Filter) => void;
-  onPin: (bookId: string) => void;
-  onEdit: (bookId: string) => void;
-  onToggleRead: (bookId: string) => void;
-  onRemove: (bookId: string) => void;
+  onOpen: (bookId: string) => void;
 };
 
-export default function BookList({ books, filter, onFilter, onPin, onEdit, onToggleRead, onRemove }: Props) {
-
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!openMenuId) return;
-    function onDocClick(e: MouseEvent) {
-      if (menuContainerRef.current?.contains(e.target as Node)) return;
-      setOpenMenuId(null);
-    }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, [openMenuId]);
-
-  const runAction = (action: () => void) => {
-    setOpenMenuId(null);
-    action();
-  };
-
+export default function BookList({ books, filter, onFilter, onOpen }: Props) {
   const filtered = books
     .filter((b) => (filter === "available" ? !b.read : b.read))
     .sort((a, b) => b.addedAt - a.addedAt);
@@ -78,42 +55,38 @@ export default function BookList({ books, filter, onFilter, onPin, onEdit, onTog
           <div className="empty">{emptyMessage}</div>
         ) : (
           filtered.map((book) => {
-            const isOpen = openMenuId === book.id;
             const suggesterName = book.suggestedByName;
             return (
-              <div key={book.id} className={`book${book.read ? " read" : ""}${isOpen ? " menu-open" : ""}`}>
+              <div
+                key={book.id}
+                className={`book book-clickable${book.read ? " read" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpen(book.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(book.id);
+                  }
+                }}
+                aria-label={`Open details for ${book.title}`}
+              >
                 <div className="book-info">
                   <div className="book-title">{book.title}</div>
                   {book.author ? <div className="book-author">{book.author}</div> : null}
                   {suggesterName ? <div className="book-meta">By {suggesterName}</div> : null}
                 </div>
-                <div
-                  className="book-actions"
-                  ref={isOpen ? menuContainerRef : undefined}
-                >
+                <div className="book-actions">
                   <button
                     className="icon-btn"
-                    aria-label="Actions"
-                    aria-expanded={isOpen}
+                    aria-label="Open details"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setOpenMenuId(isOpen ? null : book.id);
+                      onOpen(book.id);
                     }}
                   >
-                    <KebabIcon />
+                    <ExpandIcon />
                   </button>
-                  <div className={`book-menu${isOpen ? " open" : ""}`}>
-                    {!book.read ? (
-                      <button onClick={() => runAction(() => onPin(book.id))}>Pin book</button>
-                    ) : null}
-                    <button onClick={() => runAction(() => onEdit(book.id))}>Edit</button>
-                    <button onClick={() => runAction(() => onToggleRead(book.id))}>
-                      {book.read ? "Mark unread" : "Mark finished"}
-                    </button>
-                    <button className="danger" onClick={() => runAction(() => onRemove(book.id))}>
-                      Delete
-                    </button>
-                  </div>
                 </div>
               </div>
             );

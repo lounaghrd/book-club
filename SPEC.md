@@ -8,12 +8,13 @@ A mobile-first web app for a small book club. Anyone with the link can suggest b
 
 ## Core features
 
-1. **Currently reading** — pinned at top of the page. Shows title, author, days-until-meeting countdown, and meeting date. Kebab menu (⋮) holds: change date, edit (title/author), mark finished, unpin.
-2. **Reading list** — anyone can suggest a book (title + optional author). Suggestions auto-attribute to the current user (see Identity). Per book: pin as current, edit (title/author), mark read/unread, remove.
-3. **Two filters** — "Up next" (unread, default) and "Read".
-4. **Identity ("who's reading")** — on first visit a blocking picker asks the visitor to choose their name from a shared list or add a new one; the choice is persisted locally and shown as a header chip that re-opens the picker so anyone can switch. Users can be renamed or removed (rename updates the name everywhere; removal keeps a person's past suggestions, frozen under their last name). Attribution only — not a security boundary.
+1. **Currently reading** — pinned at top of the page. Shows title, author, days-until-meeting countdown, and meeting date. Tapping it opens the book card (below), which holds the actions.
+2. **Reading list** — anyone can suggest a book (title + optional author + optional note on why). Suggestions auto-attribute to the current user (see Identity). Each row shows title/author/suggester and expands into the book card.
+3. **Book card** — a bottom-sheet detail view, opened from a list row or the currently-reading hero. Shows title, author, who suggested it, and their note. A kebab (⋮) in the card holds the actions, which depend on context: pinned book → change date, edit, mark finished, unpin; list book → pin as current, edit (title/author/note), mark read/unread, remove.
+4. **Two filters** — "Up next" (unread, default) and "Read".
+5. **Identity ("who's reading")** — on first visit a blocking picker asks the visitor to choose their name from a shared list or add a new one; the choice is persisted locally and shown as a header chip that re-opens the picker so anyone can switch. Users can be renamed or removed (rename updates the name everywhere; removal keeps a person's past suggestions, frozen under their last name). Attribution only — not a security boundary.
 
-Out of scope for v1: voting, meeting links/locations, discussion notes, comments, notifications, real authentication.
+Out of scope for v1: voting, meeting links/locations, threaded discussion/comments, notifications, real authentication. (A single suggester's "why" note per book is in scope — see the book card — but threaded discussion is not.)
 
 ---
 
@@ -26,6 +27,7 @@ Book {
   author?: string
   suggestedByUserId?: string // FK to User; null if the suggester was deleted
   suggestedByName?: string   // denormalized name snapshot; survives user deletion
+  note?: string              // optional free-text note on why it was suggested
   read: boolean
   addedAt: timestamp
 }
