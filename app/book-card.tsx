@@ -30,10 +30,22 @@ export default function BookCard({
   onRemove,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Remember the last shown book so its content stays rendered while the sheet
+  // animates closed (book goes null the instant we close — without this the
+  // card would slide out blank).
+  const [snapshot, setSnapshot] = useState<{ book: Book; isPinned: boolean } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const open = !!book;
+
+  useEffect(() => {
+    if (book) setSnapshot({ book, isPinned });
+  }, [book, isPinned]);
+
+  // Use the live book while open, the snapshot while closing.
+  const display = book ?? snapshot?.book ?? null;
+  const displayPinned = book ? isPinned : snapshot?.isPinned ?? false;
 
   // Reset the kebab whenever the card opens/closes or switches books.
   useEffect(() => {
@@ -65,7 +77,7 @@ export default function BookCard({
     >
       <div className="modal book-card">
         <div className="modal-handle" />
-        {book ? (
+        {display ? (
           <>
             <button
               ref={btnRef}
@@ -80,21 +92,21 @@ export default function BookCard({
               <KebabIcon />
             </button>
 
-            <div className="book-card-title">{book.title}</div>
-            <div className="book-card-author">{book.author || "Unknown author"}</div>
+            <div className="book-card-title">{display.title}</div>
+            <div className="book-card-author">{display.author || "Unknown author"}</div>
 
-            {book.suggestedByName ? (
-              <div className="book-card-suggester">Suggested by {book.suggestedByName}</div>
+            {display.suggestedByName ? (
+              <div className="book-card-suggester">Suggested by {display.suggestedByName}</div>
             ) : null}
 
             <div className="book-card-note-label">Why this book</div>
-            <div className={`book-card-note${book.note ? "" : " empty"}`}>
-              {book.note || "No note yet."}
+            <div className={`book-card-note${display.note ? "" : " empty"}`}>
+              {display.note || "No note yet."}
             </div>
 
             <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
               <div className="book-card-menu-inner">
-                {isPinned ? (
+                {displayPinned ? (
                   <>
                     <button onClick={() => runAction(onReschedule)}>Change date</button>
                     <button onClick={() => runAction(onEdit)}>Edit</button>
@@ -105,12 +117,12 @@ export default function BookCard({
                   </>
                 ) : (
                   <>
-                    {!book.read ? (
+                    {!display.read ? (
                       <button onClick={() => runAction(onPin)}>Pin book</button>
                     ) : null}
                     <button onClick={() => runAction(onEdit)}>Edit</button>
                     <button onClick={() => runAction(onToggleRead)}>
-                      {book.read ? "Mark unread" : "Mark finished"}
+                      {display.read ? "Mark unread" : "Mark finished"}
                     </button>
                     <button className="danger" onClick={() => runAction(onRemove)}>
                       Delete

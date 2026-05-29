@@ -60,16 +60,7 @@ export default function BookList({ books, filter, onFilter, onOpen }: Props) {
               <div
                 key={book.id}
                 className={`book book-clickable${book.read ? " read" : ""}`}
-                role="button"
-                tabIndex={0}
                 onClick={() => onOpen(book.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onOpen(book.id);
-                  }
-                }}
-                aria-label={`Open details for ${book.title}`}
               >
                 <div className="book-info">
                   <div className="book-title">{book.title}</div>
@@ -79,7 +70,7 @@ export default function BookList({ books, filter, onFilter, onOpen }: Props) {
                 <div className="book-actions">
                   <button
                     className="icon-btn"
-                    aria-label="Open details"
+                    aria-label={`Open details for ${book.title}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpen(book.id);

@@ -691,12 +691,16 @@ header {
   overflow: hidden;
   max-height: 0;
   opacity: 0;
-  transition: max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease;
+  visibility: hidden;
+  transition: max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease,
+    visibility 0s linear 0.22s;
 }
 .book-card-menu.open {
   margin-top: 22px;
   max-height: 320px;
   opacity: 1;
+  visibility: visible;
+  transition: max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease, visibility 0s;
 }
 .book-card-menu-inner {
   border: 1px solid var(--border-strong);
@@ -927,14 +931,17 @@ header {
   z-index: 4;
   opacity: 0;
   pointer-events: none;
+  visibility: hidden;
   transform: translateY(-4px);
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity 0.15s, transform 0.15s, visibility 0s linear 0.15s;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
 }
 .user-menu.open {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
   transform: translateY(0);
+  transition: opacity 0.15s, transform 0.15s, visibility 0s;
 }
 /* Flipped upward for rows low in the viewport so the menu never clips off the
    bottom of the sheet. */

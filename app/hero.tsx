@@ -50,26 +50,14 @@ export default function Hero({ current, book, onOpen }: Props) {
   }
 
   return (
-    <div
-      className="hero hero-clickable"
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-      aria-label={`Open details for ${book.title}`}
-    >
+    <div className="hero hero-clickable" onClick={onOpen}>
       <button
         className="hero-menu-btn"
         onClick={(e) => {
           e.stopPropagation();
           onOpen();
         }}
-        aria-label="Open details"
+        aria-label={`Open details for ${book.title}`}
       >
         <ExpandIcon />
       </button>
