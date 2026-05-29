@@ -741,6 +741,46 @@ header {
   font-weight: 600;
 }
 
+/* "I've read this before" pill: a check + count, sibling to the upvote pill.
+   Shares the upvote pill's outlined base but fills neutral (not accent) when
+   marked, so the two controls stay visually distinct. */
+.book-card-read {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.read-btn {
+  height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.read-btn:active {
+  transform: scale(0.94);
+}
+.read-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.read-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.read-btn.marked {
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--bg);
+}
+
 /* Actions revealed inline by the card's kebab. Inline (not a floating dropdown)
    so they can never clip off the bottom of the sheet. */
 .book-card-menu {

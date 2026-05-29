@@ -26,4 +26,12 @@ export type Vote = {
   userId: string;
 };
 
+// A member marking that they've already read a book (distinct from Book.read,
+// which means the whole club has finished it). One per (book, user).
+export type ReadBefore = {
+  id: string;
+  bookId: string;
+  userId: string;
+};
+
 export type Filter = "available" | "read";
