@@ -713,11 +713,6 @@ header {
   width: 14px;
   height: 14px;
 }
-.install-cta {
-  width: 100%;
-  padding: 16px;
-}
-
 /* User chip (in header) */
 .user-chip {
   display: inline-flex;
