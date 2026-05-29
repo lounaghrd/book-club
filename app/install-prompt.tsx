@@ -2,26 +2,54 @@
 
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "bookclub:install_dismissed";
+// "Done" means the user has installed it — never prompt again.
+const DONE_KEY = "bookclub:install_done";
+// Timestamp (ms) of the last time we showed the prompt — drives the weekly cadence.
+const LAST_PROMPTED_KEY = "bookclub:install_last_prompted";
+
+const PROMPT_DELAY_MS = 20_000; // wait after the picker closes before surfacing
+const REPROMPT_AFTER_MS = 7 * 24 * 60 * 60 * 1000; // re-prompt weekly
 
 export default function InstallPrompt() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    let shouldPrompt = false;
+    try {
+      if (localStorage.getItem(DONE_KEY)) return; // installed — never prompt again.
+      const last = Number(localStorage.getItem(LAST_PROMPTED_KEY));
+      // Show if never prompted, or if a week has passed since the last prompt.
+      shouldPrompt = !last || Date.now() - last >= REPROMPT_AFTER_MS;
+    } catch {
+      // localStorage unavailable (private mode, etc.) — don't prompt.
+      return;
+    }
+    if (!shouldPrompt) return;
+
     const timer = setTimeout(() => {
+      setOpen(true);
       try {
-        if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
+        // Record the show time now (not on dismiss) so the weekly clock keeps
+        // ticking even if the tab is closed without choosing an option.
+        localStorage.setItem(LAST_PROMPTED_KEY, String(Date.now()));
       } catch {
-        // localStorage unavailable (private mode, etc.) — don't prompt.
+        // ignore
       }
-    }, 20_000);
+    }, PROMPT_DELAY_MS);
     return () => clearTimeout(timer);
   }, []);
 
-  function dismiss() {
+  // "Remind me later" — just close; the show timestamp is already recorded, so
+  // the prompt returns in a week.
+  function remindLater() {
+    setOpen(false);
+  }
+
+  // "Done" — user installed it; stop reminding for good.
+  function markDone() {
     setOpen(false);
     try {
-      localStorage.setItem(STORAGE_KEY, "1");
+      localStorage.setItem(DONE_KEY, "1");
     } catch {
       // ignore
     }
@@ -30,12 +58,8 @@ export default function InstallPrompt() {
   if (!open) return null;
 
   return (
-    <div
-      className="modal-backdrop open install-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) dismiss();
-      }}
-    >
+    // No backdrop dismiss: the user must choose "Done" or "Remind me later".
+    <div className="modal-backdrop open install-backdrop">
       <div className="modal install-sheet">
         <div className="modal-handle" />
 
@@ -78,9 +102,14 @@ export default function InstallPrompt() {
           </div>
         </div>
 
-        <button className="btn install-cta" onClick={dismiss}>
-          Got it
-        </button>
+        <div className="modal-actions">
+          <button className="btn btn-ghost" onClick={remindLater}>
+            Remind me later
+          </button>
+          <button className="btn" onClick={markDone}>
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );
