@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Book } from "@/lib/types";
-import { KebabIcon, UpvoteIcon } from "./icons";
+import { CheckIcon, KebabIcon, UpvoteIcon } from "./icons";
 
 type Props = {
   book: Book | null;
@@ -10,6 +10,9 @@ type Props = {
   voteCount: number;
   hasVoted: boolean;
   onVote: () => void;
+  readBeforeCount: number;
+  hasReadBefore: boolean;
+  onReadBefore: () => void;
   onClose: () => void;
   onPin: () => void;
   onReschedule: () => void;
@@ -26,6 +29,9 @@ export default function BookCard({
   voteCount,
   hasVoted,
   onVote,
+  readBeforeCount,
+  hasReadBefore,
+  onReadBefore,
   onClose,
   onPin,
   onReschedule,
@@ -44,6 +50,8 @@ export default function BookCard({
     isPinned: boolean;
     voteCount: number;
     hasVoted: boolean;
+    readBeforeCount: number;
+    hasReadBefore: boolean;
   } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -51,14 +59,18 @@ export default function BookCard({
   const open = !!book;
 
   useEffect(() => {
-    if (book) setSnapshot({ book, isPinned, voteCount, hasVoted });
-  }, [book, isPinned, voteCount, hasVoted]);
+    if (book) {
+      setSnapshot({ book, isPinned, voteCount, hasVoted, readBeforeCount, hasReadBefore });
+    }
+  }, [book, isPinned, voteCount, hasVoted, readBeforeCount, hasReadBefore]);
 
   // Use the live book while open, the snapshot while closing.
   const display = book ?? snapshot?.book ?? null;
   const displayPinned = book ? isPinned : snapshot?.isPinned ?? false;
   const displayVoteCount = book ? voteCount : snapshot?.voteCount ?? 0;
   const displayVoted = book ? hasVoted : snapshot?.hasVoted ?? false;
+  const displayReadBeforeCount = book ? readBeforeCount : snapshot?.readBeforeCount ?? 0;
+  const displayReadBefore = book ? hasReadBefore : snapshot?.hasReadBefore ?? false;
 
   // Reset the kebab whenever the card opens/closes or switches books.
   useEffect(() => {
@@ -127,6 +139,30 @@ export default function BookCard({
               </button>
               <span className="book-card-vote-label">
                 {displayVoteCount === 1 ? "1 upvote" : `${displayVoteCount} upvotes`}
+              </span>
+            </div>
+
+            <div className="book-card-read">
+              <button
+                className={`read-btn${displayReadBefore ? " marked" : ""}`}
+                aria-label={
+                  displayReadBefore ? "I haven't read this before" : "I've read this before"
+                }
+                aria-pressed={displayReadBefore}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onReadBefore();
+                }}
+              >
+                <CheckIcon />
+                <span className="vote-count">{displayReadBeforeCount}</span>
+              </button>
+              <span className="book-card-vote-label">
+                {displayReadBeforeCount === 0
+                  ? "Nobody's read it yet"
+                  : displayReadBeforeCount === 1
+                    ? "1 has read it"
+                    : `${displayReadBeforeCount} have read it`}
               </span>
             </div>
 

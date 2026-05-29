@@ -14,6 +14,7 @@ A mobile-first web app for a small book club. Anyone with the link can suggest b
 4. **Two filters** — "Up next" (unread, default) and "Read".
 5. **Identity ("who's reading")** — on first visit a blocking picker asks the visitor to choose their name from a shared list or add a new one; the choice is persisted locally and shown as a header chip that re-opens the picker so anyone can switch. Users can be renamed or removed (rename updates the name everywhere; removal keeps a person's past suggestions, frozen under their last name). Attribution only — not a security boundary.
 6. **Upvotes** — anyone can upvote a book on the reading list to signal "I'd read this" (upvote-only, no downvotes). One vote per picked user per book; tapping again removes it. The "Up next" filter ranks by upvote count. Like identity, this is soft dedup, not a security boundary.
+7. **"Already read it"** — inside the book card, a member can mark that they've *already read* a book before (separate from the club-wide finished flag). It shows a count of how many members have read it, so the group can avoid picking something most people already know. Informational only — it doesn't block or nudge pinning. One marker per picked user per book; same soft dedup as upvotes.
 
 Out of scope for v1: ~~voting~~ (added after v1 as upvotes — see feature 6), meeting links/locations, threaded discussion/comments, notifications, real authentication. (A single suggester's "why" note per book is in scope — see the book card — but threaded discussion is not.)
 
@@ -51,6 +52,15 @@ Vote {
   createdAt: timestamp
   // unique (bookId, userId) — one upvote per user per book
 }
+
+ReadBefore {
+  id: string           // uuid
+  bookId: string       // FK to Book (cascade delete)
+  userId: string       // FK to User (cascade delete)
+  createdAt: timestamp
+  // unique (bookId, userId) — one "I've already read this" marker per user per book
+  // Distinct from Book.read, which is the club-wide finished flag.
+}
 ```
 
 Singleton `CurrentReading` (one current book at a time). Setting a new one replaces the previous.
@@ -62,7 +72,7 @@ A book keeps both a foreign key to its suggester (`suggestedByUserId`) and a `su
 ## Recommended stack
 
 - **Frontend**: Next.js 15 (App Router) or Vite + React — your choice. The prototype is plain HTML/JS so port is straightforward either way.
-- **Backend**: Supabase. Four tables (`books`, `current_reading`, `users`, `votes`) + Realtime subscriptions so everyone sees updates without refreshing. You already know the setup from Españolo.
+- **Backend**: Supabase. Five tables (`books`, `current_reading`, `users`, `votes`, `read_before`) + Realtime subscriptions so everyone sees updates without refreshing. You already know the setup from Españolo.
 - **Styling**: port the CSS from the prototype directly. All tokens are CSS variables at the top of `book-club.html` (`:root`). Tailwind is fine too if you prefer — the design uses a small token set.
 - **Font**: Bricolage Grotesque via Google Fonts (already linked in the prototype).
 - **Hosting**: Vercel.

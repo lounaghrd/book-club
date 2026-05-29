@@ -9,7 +9,7 @@ import InstallPrompt from "./install-prompt";
 import PinModal, { type PinTarget } from "./pin-modal";
 import UserPicker from "./user-picker";
 import { PlusIcon } from "./icons";
-import type { Book, CurrentReading, Filter, User, Vote } from "@/lib/types";
+import type { Book, CurrentReading, Filter, ReadBefore, User, Vote } from "@/lib/types";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { CLUB_ID } from "@/lib/config";
@@ -18,16 +18,20 @@ type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
+type ReadBeforeRow = Database["public"]["Tables"]["read_before"]["Row"];
 import {
   clearCurrent,
   deleteBook,
+  deleteReadBefore,
   deleteUser,
   deleteVote,
   insertBook,
+  insertReadBefore,
   insertUser,
   insertVote,
   mapBook,
   mapCurrent,
+  mapReadBefore,
   mapUser,
   mapVote,
   renameUser,
@@ -43,6 +47,7 @@ type Props = {
   initialCurrent: CurrentReading | null;
   initialUsers: User[];
   initialVotes: Vote[];
+  initialReadBefore: ReadBefore[];
 };
 
 export default function BookClub({
@@ -50,11 +55,13 @@ export default function BookClub({
   initialCurrent,
   initialUsers,
   initialVotes,
+  initialReadBefore,
 }: Props) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [current, setCurrent] = useState<CurrentReading | null>(initialCurrent);
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [votes, setVotes] = useState<Vote[]>(initialVotes);
+  const [readBefore, setReadBefore] = useState<ReadBefore[]>(initialReadBefore);
   const [filter, setFilter] = useState<Filter>("available");
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
@@ -161,6 +168,22 @@ export default function BookClub({
           }
         },
       )
+      .on<ReadBeforeRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "read_before", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const incoming = mapReadBefore(payload.new);
+            setReadBefore((prev) =>
+              prev.some((r) => r.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          } else if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setReadBefore((prev) => prev.filter((r) => r.id !== id));
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -186,6 +209,21 @@ export default function BookClub({
     }
     return mine;
   }, [votes, currentUserId]);
+
+  // "Already read it" tallies, derived the same way as votes: a count per book and
+  // the set the current user has marked.
+  const readBeforeCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of readBefore) counts.set(r.bookId, (counts.get(r.bookId) ?? 0) + 1);
+    return counts;
+  }, [readBefore]);
+  const myReadBefore = useMemo(() => {
+    const mine = new Set<string>();
+    if (currentUserId) {
+      for (const r of readBefore) if (r.userId === currentUserId) mine.add(r.bookId);
+    }
+    return mine;
+  }, [readBefore, currentUserId]);
   // Derive the open card's book from live state so realtime edits flow through and a
   // deleted book closes the card automatically.
   const cardBook = cardBookId ? books.find((b) => b.id === cardBookId) ?? null : null;
@@ -401,14 +439,44 @@ export default function BookClub({
     }
   }
 
+  async function toggleReadBefore(id: string) {
+    if (!currentUserId) {
+      setPickerOpen(true);
+      return;
+    }
+    const existing = readBefore.find((r) => r.bookId === id && r.userId === currentUserId);
+    const prev = readBefore;
+    if (existing) {
+      setReadBefore((rs) => rs.filter((r) => r.id !== existing.id));
+      try {
+        await deleteReadBefore(supabase, id, currentUserId);
+      } catch (e) {
+        console.error("Failed to remove read-before mark", e);
+        setReadBefore(prev);
+      }
+    } else {
+      const mark: ReadBefore = { id: crypto.randomUUID(), bookId: id, userId: currentUserId };
+      setReadBefore((rs) => [...rs, mark]);
+      try {
+        await insertReadBefore(supabase, mark);
+      } catch (e) {
+        console.error("Failed to add read-before mark", e);
+        setReadBefore((rs) => rs.filter((r) => r.id !== mark.id));
+      }
+    }
+  }
+
   async function removeBook(id: string) {
     if (!confirm("Remove this book from the list?")) return;
     const prevBooks = books;
     const prevCurrent = current;
     const prevVotes = votes;
+    const prevReadBefore = readBefore;
     setBooks((bs) => bs.filter((b) => b.id !== id));
-    // Votes cascade-delete in the DB; drop them locally too so the count doesn't linger.
+    // Votes and read-before marks cascade-delete in the DB; drop them locally too
+    // so the counts don't linger.
     setVotes((vs) => vs.filter((v) => v.bookId !== id));
+    setReadBefore((rs) => rs.filter((r) => r.bookId !== id));
     if (current?.bookId === id) setCurrent(null);
     try {
       await deleteBook(supabase, id);
@@ -417,6 +485,7 @@ export default function BookClub({
       setBooks(prevBooks);
       setCurrent(prevCurrent);
       setVotes(prevVotes);
+      setReadBefore(prevReadBefore);
     }
   }
 
@@ -478,6 +547,9 @@ export default function BookClub({
         voteCount={cardBook ? voteCounts.get(cardBook.id) ?? 0 : 0}
         hasVoted={cardBook ? myVotes.has(cardBook.id) : false}
         onVote={() => cardBook && toggleVote(cardBook.id)}
+        readBeforeCount={cardBook ? readBeforeCounts.get(cardBook.id) ?? 0 : 0}
+        hasReadBefore={cardBook ? myReadBefore.has(cardBook.id) : false}
+        onReadBefore={() => cardBook && toggleReadBefore(cardBook.id)}
         onClose={() => setCardBookId(null)}
         onPin={() => cardBook && runCardAction(() => openPin(cardBook.id))}
         onReschedule={() => runCardAction(openReschedule)}

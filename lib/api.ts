@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
-import type { Book, CurrentReading, User, Vote } from "@/lib/types";
+import type { Book, CurrentReading, ReadBefore, User, Vote } from "@/lib/types";
 import { CLUB_ID } from "@/lib/config";
 
 // @supabase/ssr bundles its own SupabaseClient — derive DB from its factory so both
@@ -10,6 +10,7 @@ type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
+type ReadBeforeRow = Database["public"]["Tables"]["read_before"]["Row"];
 
 export function mapBook(row: BookRow): Book {
   return {
@@ -37,6 +38,10 @@ export function mapUser(row: UserRow): User {
 }
 
 export function mapVote(row: VoteRow): Vote {
+  return { id: row.id, bookId: row.book_id, userId: row.user_id };
+}
+
+export function mapReadBefore(row: ReadBeforeRow): ReadBefore {
   return { id: row.id, bookId: row.book_id, userId: row.user_id };
 }
 
@@ -89,6 +94,31 @@ export async function insertVote(db: DB, vote: Vote): Promise<void> {
 export async function deleteVote(db: DB, bookId: string, userId: string): Promise<void> {
   const { error } = await db
     .from("votes")
+    .delete()
+    .eq("book_id", bookId)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function fetchReadBefore(db: DB): Promise<ReadBefore[]> {
+  const { data, error } = await db.from("read_before").select("*").eq("club_id", CLUB_ID);
+  if (error) throw error;
+  return (data ?? []).map(mapReadBefore);
+}
+
+export async function insertReadBefore(db: DB, mark: ReadBefore): Promise<void> {
+  const { error } = await db.from("read_before").insert({
+    id: mark.id,
+    club_id: CLUB_ID,
+    book_id: mark.bookId,
+    user_id: mark.userId,
+  });
+  if (error) throw error;
+}
+
+export async function deleteReadBefore(db: DB, bookId: string, userId: string): Promise<void> {
+  const { error } = await db
+    .from("read_before")
     .delete()
     .eq("book_id", bookId)
     .eq("user_id", userId);
