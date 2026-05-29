@@ -11,19 +11,18 @@ A mobile-first web app for a small private book club. Open-link access (no auth)
 
 ## Status
 
-Shipped and live on Vercel. Passes 1–5 done plus several follow-ups:
+Shipped and live on Vercel. Current behavior below; build history is in git.
 
-- **Pass 1** — Next.js + Supabase scaffold
-- **Pass 2** — UI ported from `book-club.html` with hardcoded seed
-- **Pass 3** — Wired UI to Supabase reads + writes
-- **Pass 4** — Supabase Realtime subscriptions (live multi-user updates)
-- **Pass 5** — Polish (dark theme color for mobile chrome) + Vercel deploy
-- **Install prompt** — Bottom sheet explaining "Add to Home Screen". Surfaces 20s after the user picker closes, then re-prompts weekly until the user installs. The sheet requires an explicit choice — the backdrop no longer dismisses: **Done** sets a permanent flag (`bookclub:install_done`) and stops all future prompts; **Remind me later** just closes it and it returns in a week. Cadence is driven by `bookclub:install_last_prompted` (timestamp recorded when the sheet *opens*, not on dismiss, so the weekly clock advances even if the tab is closed without choosing).
-- **App icon** — Dark tile with a centered orange square, generated via `next/og` (`app/icon.tsx` for favicon, `app/apple-icon.tsx` for home-screen)
-- **Book-row kebab menu** — Per-row Pin/Check/X buttons replaced with a single ⋮ that opens a popover styled to match the pinned-book (hero) menu. Available books offer Pin / Mark finished / Delete; read books offer Mark unread / Delete. Read rows un-dim while their menu is open so the menu stays legible.
-- **Artificial user "auth"** — On first visit, a blocking bottom sheet (`app/user-picker.tsx`) asks the visitor to pick their name from a shared list (or add a new one). Selection is persisted to `localStorage` (`bookclub:current_user_id`). A small chip in the header shows the current user and re-opens the picker so anyone can switch. New books auto-attribute to the current user via `books.suggested_by_user_id` (FK to `users`, `ON DELETE SET NULL`). The "Suggested by" input is gone from the add modal. The install prompt is deferred until a user is selected so the two sheets never stack (and then by a further 20s — see Install prompt above).
-- **Edit a book** — Both reading-list rows and the pinned-book hero kebab carry an **Edit** action that reopens the suggest-a-book modal in "edit" mode, prefilled with the current title/author ("Edit Book" header, "Save" button). `add-modal.tsx` is generalized to handle both add and edit via a `mode` prop plus optional initial values. Edits use the same optimistic-update-then-write-then-rollback flow (`updateBook` in `lib/api.ts`) and propagate to other clients through the existing Realtime `UPDATE` subscription. Only title/author are editable; `read`, suggester, and `addedAt` stay managed by their own actions.
-- **User management** — Each picker row has a ⋮ kebab (same pattern as book rows) holding **Rename** and **Remove**. Rename opens an inline edit form and updates the name everywhere it appears. Remove goes through a styled `ConfirmDialog` (`app/confirm-dialog.tsx`) rather than the browser's native `confirm()`. To survive deletion, each book also stores a denormalized `suggested_by_name` snapshot (set on insert, kept in sync on rename via `renameUser` in `lib/api.ts`); the book list renders from this snapshot, so a deleted user's name stays frozen on their past suggestions.
+## Features
+
+- **Currently reading (hero):** pinned book with a days-until-meeting countdown and meeting date. Kebab menu: change date / edit / mark finished / unpin.
+- **Reading list:** suggest a book (title + optional author); filter by "Up next" (unread) and "Read". Per-row kebab: pin / edit / mark read-or-unread / delete. Hero and row menus share styling — keep them consistent.
+- **Identity ("pick your name"):** first-visit blocking sheet (`user-picker.tsx`) to choose or add a name, persisted to `localStorage` (`bookclub:current_user_id`); a header chip re-opens it to switch. New books attribute to the current user. Per-row Rename / Remove (Remove confirms via `confirm-dialog.tsx`). Not a security boundary — see Decisions.
+- **Durable attribution:** books store both `suggested_by_user_id` (FK; renames propagate) and a `suggested_by_name` snapshot (survives user deletion). The list renders the snapshot.
+- **Edit a book:** `add-modal.tsx` is dual-mode (add / edit); only title and author are editable. Optimistic update via `updateBook` in `lib/api.ts`.
+- **Install prompt:** "Add to Home Screen" sheet, deferred until a user is picked. Cadence and dismissal rules live in `app/install-prompt.tsx`.
+- **App icon:** generated via `next/og` — `app/icon.tsx` (favicon) and `app/apple-icon.tsx` (home-screen).
+- **Realtime:** Supabase subscriptions keep all clients in sync within ~1s.
 
 ## Key files
 
@@ -55,24 +54,20 @@ Shipped and live on Vercel. Passes 1–5 done plus several follow-ups:
 - **Database types:** hand-written in `lib/database.types.ts` to avoid Supabase CLI dependency. Regenerate via `supabase gen types typescript --project-id <id>` if the schema changes.
 - **Destructive actions behind a menu:** book-row actions live behind a kebab rather than as always-visible icons, to make Delete and Pin harder to mis-tap. Style is shared with the hero menu — if you touch one, keep them visually consistent.
 
-## Env vars
+## Setup, env & deploy
 
-Three `NEXT_PUBLIC_*` vars, set both in `.env.local` (for local dev) and in Vercel project settings (for prod):
+See `README.md` — it's canonical for Supabase setup, env vars, local run, and deploy. Quick start: `npm install && npm run dev`. The three required vars are `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_CLUB_ID` (in `.env.local` locally, Vercel project settings in prod).
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_CLUB_ID`
+## Verifying changes
 
-## Run locally
+No test suite. Before committing, validate with:
 
 ```bash
-npm install
-npm run dev   # http://localhost:3000
+npx tsc --noEmit   # typecheck
+npm run build      # full build
 ```
 
-## Deploy
-
-Vercel auto-deploys on push to the merged branch. Env vars live in the Vercel project settings (Settings → Environment Variables).
+Use `npm run dev` for manual checks.
 
 ## Gotchas
 
