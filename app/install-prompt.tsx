@@ -8,11 +8,14 @@ export default function InstallPrompt() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    try {
-      if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
-    } catch {
-      // localStorage unavailable (private mode, etc.) — don't prompt.
-    }
+    const timer = setTimeout(() => {
+      try {
+        if (!localStorage.getItem(STORAGE_KEY)) setOpen(true);
+      } catch {
+        // localStorage unavailable (private mode, etc.) — don't prompt.
+      }
+    }, 20_000);
+    return () => clearTimeout(timer);
   }, []);
 
   function dismiss() {
