@@ -1,35 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { Book, CurrentReading } from "@/lib/types";
 import { daysUntil, formatDate } from "@/lib/format";
-import { KebabIcon } from "./icons";
+import { ExpandIcon } from "./icons";
 
 type Props = {
   current: CurrentReading | null;
   book: Book | null;
-  onReschedule: () => void;
-  onEdit: () => void;
-  onFinish: () => void;
-  onUnpin: () => void;
+  onOpen: () => void;
 };
 
-export default function Hero({ current, book, onReschedule, onEdit, onFinish, onUnpin }: Props) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    function onDocClick(e: MouseEvent) {
-      const target = e.target as Node;
-      if (menuRef.current?.contains(target) || btnRef.current?.contains(target)) return;
-      setMenuOpen(false);
-    }
-    document.addEventListener("click", onDocClick);
-    return () => document.removeEventListener("click", onDocClick);
-  }, [menuOpen]);
-
+export default function Hero({ current, book, onOpen }: Props) {
   if (!book) {
     return (
       <div className="hero">
@@ -68,23 +49,29 @@ export default function Hero({ current, book, onReschedule, onEdit, onFinish, on
     }
   }
 
-  const handleMenuAction = (action: () => void) => {
-    setMenuOpen(false);
-    action();
-  };
-
   return (
-    <div className="hero">
+    <div
+      className="hero hero-clickable"
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      aria-label={`Open details for ${book.title}`}
+    >
       <button
-        ref={btnRef}
         className="hero-menu-btn"
         onClick={(e) => {
           e.stopPropagation();
-          setMenuOpen((o) => !o);
+          onOpen();
         }}
-        aria-label="Actions"
+        aria-label="Open details"
       >
-        <KebabIcon />
+        <ExpandIcon />
       </button>
       <div className="hero-label">Currently Reading</div>
       <div className="hero-title">{book.title}</div>
@@ -106,14 +93,6 @@ export default function Hero({ current, book, onReschedule, onEdit, onFinish, on
           <div className="hero-meta-warning">No meeting scheduled</div>
         </div>
       )}
-      <div ref={menuRef} className={`hero-menu${menuOpen ? " open" : ""}`}>
-        <button onClick={() => handleMenuAction(onReschedule)}>Change date</button>
-        <button onClick={() => handleMenuAction(onEdit)}>Edit</button>
-        <button onClick={() => handleMenuAction(onFinish)}>Mark finished</button>
-        <button className="danger" onClick={() => handleMenuAction(onUnpin)}>
-          Unpin
-        </button>
-      </div>
     </div>
   );
 }

@@ -17,6 +17,7 @@ export function mapBook(row: BookRow): Book {
     author: row.author,
     suggestedByUserId: row.suggested_by_user_id,
     suggestedByName: row.suggested_by_name,
+    note: row.note,
     read: row.read,
     addedAt: new Date(row.added_at).getTime(),
   };
@@ -72,6 +73,7 @@ export async function insertBook(db: DB, book: Book): Promise<void> {
     author: book.author,
     suggested_by_user_id: book.suggestedByUserId,
     suggested_by_name: book.suggestedByName,
+    note: book.note,
     read: book.read,
     added_at: new Date(book.addedAt).toISOString(),
   });
@@ -86,7 +88,7 @@ export async function updateBookRead(db: DB, id: string, read: boolean): Promise
 export async function updateBook(
   db: DB,
   id: string,
-  fields: { title: string; author: string | null },
+  fields: { title: string; author: string | null; note: string | null },
 ): Promise<void> {
   const { error } = await db.from("books").update(fields).eq("id", id);
   if (error) throw error;

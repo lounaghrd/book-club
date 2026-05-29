@@ -603,7 +603,21 @@ header {
   color: var(--text);
   transition: border-color 0.15s;
 }
-.field input:focus {
+.field textarea {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+  resize: vertical;
+  min-height: 76px;
+  transition: border-color 0.15s;
+}
+.field input:focus,
+.field textarea:focus {
   outline: none;
   border-color: var(--text);
 }
@@ -620,6 +634,58 @@ header {
 .modal-actions .btn {
   flex: 1;
   padding: 14px;
+}
+
+/* Book detail card (bottom sheet) */
+.book-card {
+  position: relative;
+}
+.book-card-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-variation-settings: "wdth" 88;
+  padding-right: 44px;
+  word-break: break-word;
+}
+.book-card-author {
+  font-size: 15px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+.book-card-suggester {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+.book-card-note-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 22px;
+  margin-bottom: 8px;
+}
+.book-card-note {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.book-card-note.empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.hero-clickable,
+.book-clickable {
+  cursor: pointer;
 }
 
 /* Install prompt */
