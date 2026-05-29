@@ -936,6 +936,16 @@ header {
   pointer-events: auto;
   transform: translateY(0);
 }
+/* Flipped upward for rows low in the viewport so the menu never clips off the
+   bottom of the sheet. */
+.user-menu.up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  transform: translateY(4px);
+}
+.user-menu.up.open {
+  transform: translateY(0);
+}
 .user-menu button {
   display: block;
   width: 100%;

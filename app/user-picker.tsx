@@ -34,6 +34,9 @@ export default function UserPicker({
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  // The per-row menu opens downward by default, but flips up when the row sits
+  // low in the viewport so it can't clip off the bottom of the sheet.
+  const [menuDir, setMenuDir] = useState<"down" | "up">("down");
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
@@ -147,12 +150,26 @@ export default function UserPicker({
                         aria-expanded={menuOpen}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenMenuId(menuOpen ? null : u.id);
+                          if (menuOpen) {
+                            setOpenMenuId(null);
+                            return;
+                          }
+                          // Flip the menu upward if it wouldn't fit below the kebab.
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const estMenuHeight = 110; // Rename + Remove
+                          setMenuDir(
+                            rect.bottom + estMenuHeight > window.innerHeight ? "up" : "down",
+                          );
+                          setOpenMenuId(u.id);
                         }}
                       >
                         <KebabIcon />
                       </button>
-                      <div className={`user-menu${menuOpen ? " open" : ""}`}>
+                      <div
+                        className={`user-menu${menuOpen ? " open" : ""}${
+                          menuOpen && menuDir === "up" ? " up" : ""
+                        }`}
+                      >
                         <button onClick={() => startRename(u)}>Rename</button>
                         <button
                           className="danger"
