@@ -9,7 +9,7 @@ import InstallPrompt from "./install-prompt";
 import PinModal, { type PinTarget } from "./pin-modal";
 import UserPicker from "./user-picker";
 import { PlusIcon } from "./icons";
-import type { Book, CurrentReading, Filter, User } from "@/lib/types";
+import type { Book, CurrentReading, Filter, User, Vote } from "@/lib/types";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { CLUB_ID } from "@/lib/config";
@@ -17,15 +17,19 @@ import { CLUB_ID } from "@/lib/config";
 type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
+type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
 import {
   clearCurrent,
   deleteBook,
   deleteUser,
+  deleteVote,
   insertBook,
   insertUser,
+  insertVote,
   mapBook,
   mapCurrent,
   mapUser,
+  mapVote,
   renameUser,
   updateBook,
   updateBookRead,
@@ -38,12 +42,19 @@ type Props = {
   initialBooks: Book[];
   initialCurrent: CurrentReading | null;
   initialUsers: User[];
+  initialVotes: Vote[];
 };
 
-export default function BookClub({ initialBooks, initialCurrent, initialUsers }: Props) {
+export default function BookClub({
+  initialBooks,
+  initialCurrent,
+  initialUsers,
+  initialVotes,
+}: Props) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [current, setCurrent] = useState<CurrentReading | null>(initialCurrent);
   const [users, setUsers] = useState<User[]>(initialUsers);
+  const [votes, setVotes] = useState<Vote[]>(initialVotes);
   const [filter, setFilter] = useState<Filter>("available");
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
@@ -134,6 +145,22 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
           }
         },
       )
+      .on<VoteRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "votes", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const incoming = mapVote(payload.new);
+            setVotes((prev) =>
+              prev.some((v) => v.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          } else if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setVotes((prev) => prev.filter((v) => v.id !== id));
+          }
+        },
+      )
       .subscribe();
 
     return () => {
@@ -144,6 +171,21 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
   const listBooks = books.filter((b) => b.id !== current?.bookId);
   const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) ?? null : null;
+
+  // Upvote tallies: a count per book and the set the current user has voted on.
+  // Derived from the flat votes list so realtime echoes flow straight through.
+  const voteCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const v of votes) counts.set(v.bookId, (counts.get(v.bookId) ?? 0) + 1);
+    return counts;
+  }, [votes]);
+  const myVotes = useMemo(() => {
+    const mine = new Set<string>();
+    if (currentUserId) {
+      for (const v of votes) if (v.userId === currentUserId) mine.add(v.bookId);
+    }
+    return mine;
+  }, [votes, currentUserId]);
   // Derive the open card's book from live state so realtime edits flow through and a
   // deleted book closes the card automatically.
   const cardBook = cardBookId ? books.find((b) => b.id === cardBookId) ?? null : null;
@@ -332,11 +374,41 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
     }
   }
 
+  async function toggleVote(id: string) {
+    if (!currentUserId) {
+      setPickerOpen(true);
+      return;
+    }
+    const existing = votes.find((v) => v.bookId === id && v.userId === currentUserId);
+    const prevVotes = votes;
+    if (existing) {
+      setVotes((vs) => vs.filter((v) => v.id !== existing.id));
+      try {
+        await deleteVote(supabase, id, currentUserId);
+      } catch (e) {
+        console.error("Failed to remove vote", e);
+        setVotes(prevVotes);
+      }
+    } else {
+      const vote: Vote = { id: crypto.randomUUID(), bookId: id, userId: currentUserId };
+      setVotes((vs) => [...vs, vote]);
+      try {
+        await insertVote(supabase, vote);
+      } catch (e) {
+        console.error("Failed to add vote", e);
+        setVotes((vs) => vs.filter((v) => v.id !== vote.id));
+      }
+    }
+  }
+
   async function removeBook(id: string) {
     if (!confirm("Remove this book from the list?")) return;
     const prevBooks = books;
     const prevCurrent = current;
+    const prevVotes = votes;
     setBooks((bs) => bs.filter((b) => b.id !== id));
+    // Votes cascade-delete in the DB; drop them locally too so the count doesn't linger.
+    setVotes((vs) => vs.filter((v) => v.bookId !== id));
     if (current?.bookId === id) setCurrent(null);
     try {
       await deleteBook(supabase, id);
@@ -344,6 +416,7 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       console.error("Failed to remove book", e);
       setBooks(prevBooks);
       setCurrent(prevCurrent);
+      setVotes(prevVotes);
     }
   }
 
@@ -388,6 +461,9 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
           filter={filter}
           onFilter={setFilter}
           onOpen={setCardBookId}
+          voteCounts={voteCounts}
+          myVotes={myVotes}
+          onVote={toggleVote}
         />
       </div>
 
@@ -399,6 +475,9 @@ export default function BookClub({ initialBooks, initialCurrent, initialUsers }:
       <BookCard
         book={cardBook}
         isPinned={cardIsPinned}
+        voteCount={cardBook ? voteCounts.get(cardBook.id) ?? 0 : 0}
+        hasVoted={cardBook ? myVotes.has(cardBook.id) : false}
+        onVote={() => cardBook && toggleVote(cardBook.id)}
         onClose={() => setCardBookId(null)}
         onPin={() => cardBook && runCardAction(() => openPin(cardBook.id))}
         onReschedule={() => runCardAction(openReschedule)}
