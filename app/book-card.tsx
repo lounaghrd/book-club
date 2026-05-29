@@ -92,30 +92,32 @@ export default function BookCard({
               {book.note || "No note yet."}
             </div>
 
-            <div ref={menuRef} className={`hero-menu${menuOpen ? " open" : ""}`}>
-              {isPinned ? (
-                <>
-                  <button onClick={() => runAction(onReschedule)}>Change date</button>
-                  <button onClick={() => runAction(onEdit)}>Edit</button>
-                  <button onClick={() => runAction(onFinish)}>Mark finished</button>
-                  <button className="danger" onClick={() => runAction(onUnpin)}>
-                    Unpin
-                  </button>
-                </>
-              ) : (
-                <>
-                  {!book.read ? (
-                    <button onClick={() => runAction(onPin)}>Pin book</button>
-                  ) : null}
-                  <button onClick={() => runAction(onEdit)}>Edit</button>
-                  <button onClick={() => runAction(onToggleRead)}>
-                    {book.read ? "Mark unread" : "Mark finished"}
-                  </button>
-                  <button className="danger" onClick={() => runAction(onRemove)}>
-                    Delete
-                  </button>
-                </>
-              )}
+            <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
+              <div className="book-card-menu-inner">
+                {isPinned ? (
+                  <>
+                    <button onClick={() => runAction(onReschedule)}>Change date</button>
+                    <button onClick={() => runAction(onEdit)}>Edit</button>
+                    <button onClick={() => runAction(onFinish)}>Mark finished</button>
+                    <button className="danger" onClick={() => runAction(onUnpin)}>
+                      Unpin
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {!book.read ? (
+                      <button onClick={() => runAction(onPin)}>Pin book</button>
+                    ) : null}
+                    <button onClick={() => runAction(onEdit)}>Edit</button>
+                    <button onClick={() => runAction(onToggleRead)}>
+                      {book.read ? "Mark unread" : "Mark finished"}
+                    </button>
+                    <button className="danger" onClick={() => runAction(onRemove)}>
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </>
         ) : null}

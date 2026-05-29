@@ -639,6 +639,8 @@ header {
 /* Book detail card (bottom sheet) */
 .book-card {
   position: relative;
+  max-height: 88vh;
+  overflow-y: auto;
 }
 .book-card-title {
   font-size: 24px;
@@ -681,6 +683,50 @@ header {
 .book-card-note.empty {
   color: var(--muted);
   font-style: italic;
+}
+
+/* Actions revealed inline by the card's kebab. Inline (not a floating dropdown)
+   so they can never clip off the bottom of the sheet. */
+.book-card-menu {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.22s ease, opacity 0.18s ease, margin-top 0.22s ease;
+}
+.book-card-menu.open {
+  margin-top: 22px;
+  max-height: 320px;
+  opacity: 1;
+}
+.book-card-menu-inner {
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+}
+.book-card-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.book-card-menu button:last-child {
+  border-bottom: none;
+}
+.book-card-menu button:hover {
+  background: var(--bg);
+}
+.book-card-menu button.danger {
+  color: var(--accent);
 }
 
 .hero-clickable,
