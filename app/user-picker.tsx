@@ -167,7 +167,7 @@ export default function UserPicker({
                       </button>
                       <div
                         className={`user-menu${menuOpen ? " open" : ""}${
-                          menuOpen && menuDir === "up" ? " up" : ""
+                          menuDir === "up" ? " up" : ""
                         }`}
                       >
                         <button onClick={() => startRename(u)}>Rename</button>
