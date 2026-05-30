@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@/lib/types";
-import { KebabIcon } from "./icons";
+import { KebabIcon, XIcon } from "./icons";
 import ConfirmDialog from "./confirm-dialog";
 
 type Props = {
@@ -106,6 +106,12 @@ export default function UserPicker({
     >
       <div className="modal install-sheet user-picker-sheet">
         <div className="modal-handle" />
+
+        {dismissible ? (
+          <button className="hero-menu-btn" aria-label="Close" onClick={onClose}>
+            <XIcon />
+          </button>
+        ) : null}
 
         <div className="install-label">Who&apos;s reading</div>
         <div className="install-title">
