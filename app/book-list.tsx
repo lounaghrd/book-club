@@ -11,6 +11,7 @@ type Props = {
   voteCounts: Map<string, number>;
   myVotes: Set<string>;
   onVote: (bookId: string) => void;
+  readBeforeCounts: Map<string, number>;
 };
 
 export default function BookList({
@@ -21,15 +22,19 @@ export default function BookList({
   voteCounts,
   myVotes,
   onVote,
+  readBeforeCounts,
 }: Props) {
   const filtered = books
     .filter((b) => (filter === "available" ? !b.read : b.read))
-    // "Up next" ranks by upvotes (most-wanted first), newest as the tie-break;
-    // "Read" stays newest-first.
+    // "Up next" ranks by upvotes (most-wanted first); ties go to the book fewer
+    // members have already read (a quiet nudge toward fresh-to-the-group picks),
+    // then newest. "Read" stays newest-first.
     .sort((a, b) => {
       if (filter === "available") {
-        const diff = (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0);
-        if (diff !== 0) return diff;
+        const voteDiff = (voteCounts.get(b.id) ?? 0) - (voteCounts.get(a.id) ?? 0);
+        if (voteDiff !== 0) return voteDiff;
+        const readDiff = (readBeforeCounts.get(a.id) ?? 0) - (readBeforeCounts.get(b.id) ?? 0);
+        if (readDiff !== 0) return readDiff;
       }
       return b.addedAt - a.addedAt;
     });
