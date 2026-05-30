@@ -533,6 +533,7 @@ export default function BookClub({
           voteCounts={voteCounts}
           myVotes={myVotes}
           onVote={toggleVote}
+          readBeforeCounts={readBeforeCounts}
         />
       </div>
 
