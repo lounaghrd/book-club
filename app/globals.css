@@ -980,8 +980,8 @@ header {
   margin-bottom: 14px;
   /* Scroll the list — not the whole sheet — so the header and "Add someone"
      stay put while the names scroll. min-height:0 lets it shrink in the flex
-     column so overflow actually kicks in. */
-  flex: 1;
+     column so overflow kicks in only once the list outgrows the capped sheet;
+     short lists size to their content (no stretched gap before "Add someone"). */
   min-height: 0;
   overflow-y: auto;
 }

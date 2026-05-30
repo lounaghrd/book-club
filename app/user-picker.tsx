@@ -40,6 +40,7 @@ export default function UserPicker({
   const [pendingDelete, setPendingDelete] = useState<User | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const menuContainerRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -133,7 +134,7 @@ export default function UserPicker({
 
         {mode === "select" ? (
           <>
-            <div className="user-list">
+            <div className="user-list" ref={listRef}>
               {users.map((u) => {
                 const active = u.id === currentUserId;
                 const menuOpen = openMenuId === u.id;
@@ -160,12 +161,16 @@ export default function UserPicker({
                             setOpenMenuId(null);
                             return;
                           }
-                          // Flip the menu upward if it wouldn't fit below the kebab.
+                          // Flip the menu upward if it wouldn't fit below the
+                          // kebab. The list scrolls, so the real clipping edge
+                          // is the bottom of the list container (not the
+                          // window) — measure against that.
                           const rect = e.currentTarget.getBoundingClientRect();
                           const estMenuHeight = 110; // Rename + Remove
-                          setMenuDir(
-                            rect.bottom + estMenuHeight > window.innerHeight ? "up" : "down",
-                          );
+                          const limit = listRef.current
+                            ? listRef.current.getBoundingClientRect().bottom
+                            : window.innerHeight;
+                          setMenuDir(rect.bottom + estMenuHeight > limit ? "up" : "down");
                           setOpenMenuId(u.id);
                         }}
                       >
