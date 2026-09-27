@@ -861,7 +861,7 @@ header {
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   padding: 12px 12px 12px 14px;
 }
 .vote-mine-info {
@@ -881,6 +881,65 @@ header {
   font-weight: 600;
   word-break: break-word;
 }
+/* "Done" state once you've suggested: a clear success so there's nothing left
+   to do until voting opens. */
+.vote-done {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.vote-done-icon {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--bg);
+}
+.vote-done-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.vote-done-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 85;
+  line-height: 1.05;
+}
+.vote-done-sub {
+  font-size: 14px;
+  color: var(--text-soft);
+  margin-top: 4px;
+}
+.vote-mine-edit {
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.vote-count-line {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 18px;
+}
+.vote-count-line + .vote-advance {
+  margin-top: 4px;
+}
+
 /* Quiet text button that moves the session to its next stage. */
 .vote-advance {
   display: block;

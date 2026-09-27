@@ -1,7 +1,7 @@
 "use client";
 
 import type { Book, Nomination, VotingSession } from "@/lib/types";
-import { UpvoteIcon } from "./icons";
+import { CheckIcon, UpvoteIcon } from "./icons";
 
 export type Entry = {
   nomination: Nomination;
@@ -63,33 +63,54 @@ function Idle({ nudge, onOpen }: Props) {
 }
 
 // Stage 1: everyone adds one book. Other people's suggestions stay hidden —
-// only the count shows.
+// only the count shows. Before you've suggested, the panel is a call to action;
+// after, it's a "done" state so it's clear there's nothing left to do until
+// voting opens.
 function Proposing({ entries, myEntry, onSuggest, onEditMine, onAdvance }: Props) {
   const n = entries.length;
-  return (
-    <div className="vote-panel">
-      <div className="hero-label">Next book · Suggestions</div>
-      <div className="vote-panel-title">
-        {n} {n === 1 ? "suggestion" : "suggestions"}
-      </div>
-      {myEntry ? (
-        <div className="vote-mine">
-          <div className="vote-mine-info">
-            <div className="vote-mine-label">Yours</div>
-            <div className="vote-mine-title">{myEntry.book.title}</div>
-          </div>
-          <button className="btn btn-ghost btn-small" onClick={onEditMine}>
-            Edit
-          </button>
-        </div>
-      ) : (
+  const count = `${n} ${n === 1 ? "suggestion" : "suggestions"}`;
+  const advance = (
+    <button className="vote-advance" onClick={onAdvance}>
+      {n === 0 ? "Cancel" : "Close suggestions & start voting"}
+    </button>
+  );
+
+  if (!myEntry) {
+    return (
+      <div className="vote-panel">
+        <div className="hero-label">Next book · Suggestions</div>
+        <div className="vote-panel-title">{count}</div>
         <button className="btn btn-block btn-danger" onClick={onSuggest}>
           Suggest a book
         </button>
-      )}
-      <button className="vote-advance" onClick={onAdvance}>
-        {n === 0 ? "Cancel" : "Close suggestions & start voting"}
-      </button>
+        {advance}
+      </div>
+    );
+  }
+
+  return (
+    <div className="vote-panel done">
+      <div className="hero-label">Next book · Suggestions</div>
+      <div className="vote-done">
+        <span className="vote-done-icon">
+          <CheckIcon />
+        </span>
+        <div>
+          <div className="vote-done-title">You&apos;re all set</div>
+          <div className="vote-done-sub">Come back when voting opens.</div>
+        </div>
+      </div>
+      <div className="vote-mine">
+        <div className="vote-mine-info">
+          <div className="vote-mine-label">Your suggestion</div>
+          <div className="vote-mine-title">{myEntry.book.title}</div>
+        </div>
+        <button className="vote-mine-edit" onClick={onEditMine}>
+          Edit
+        </button>
+      </div>
+      <div className="vote-count-line">{count} so far</div>
+      {advance}
     </div>
   );
 }
