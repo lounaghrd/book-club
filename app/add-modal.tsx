@@ -8,8 +8,6 @@ type Props = {
   initialTitle?: string;
   initialAuthor?: string;
   initialNote?: string;
-  // Add mode only: the title of the pick a new nomination would replace.
-  replacing?: string | null;
   onClose: () => void;
   onSubmit: (data: { title: string; author: string; note: string }) => void;
 };
@@ -20,7 +18,6 @@ export default function AddModal({
   initialTitle = "",
   initialAuthor = "",
   initialNote = "",
-  replacing = null,
   onClose,
   onSubmit,
 }: Props) {
@@ -62,14 +59,7 @@ export default function AddModal({
     >
       <div className="modal">
         <div className="modal-handle" />
-        <div className="modal-title">{mode === "edit" ? "Edit Book" : "Nominate a Book"}</div>
-        {mode === "add" ? (
-          <div className="modal-subtext">
-            {replacing
-              ? `This replaces your current pick, “${replacing}”, and any votes it had.`
-              : "One book per person. Want an old favourite back? Just add it again."}
-          </div>
-        ) : null}
+        <div className="modal-title">{mode === "edit" ? "Edit Book" : "Suggest a Book"}</div>
         <div className="field">
           <label>Title</label>
           <input
@@ -107,7 +97,7 @@ export default function AddModal({
             Cancel
           </button>
           <button className="btn" onClick={submit}>
-            {mode === "edit" ? "Save" : "Nominate"}
+            {mode === "edit" ? "Save" : "Suggest"}
           </button>
         </div>
       </div>

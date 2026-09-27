@@ -28,9 +28,11 @@ export type ReadBefore = {
   userId: string;
 };
 
-// A round of picking the next book: open (nominating + voting) → closed (results
-// shown, winner waiting to be started) → done (winner pinned as current reading).
-export type SessionStatus = "open" | "closed" | "done";
+// A round of picking the next book: proposing (everyone adds one book, hidden
+// from each other) → voting (full list revealed, upvote as many as you like) →
+// closed (results shown, winner waiting to be started) → done (winner is the
+// current reading).
+export type SessionStatus = "proposing" | "voting" | "closed" | "done";
 
 export type VotingSession = {
   id: string;

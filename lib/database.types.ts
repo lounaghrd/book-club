@@ -149,7 +149,7 @@ export interface Database {
         Row: {
           id: string;
           club_id: string;
-          status: "open" | "closed" | "done";
+          status: "proposing" | "voting" | "closed" | "done";
           opened_at: string;
           closed_at: string | null;
           winner_book_id: string | null;
@@ -157,7 +157,7 @@ export interface Database {
         Insert: {
           id?: string;
           club_id: string;
-          status?: "open" | "closed" | "done";
+          status?: "proposing" | "voting" | "closed" | "done";
           opened_at?: string;
           closed_at?: string | null;
           winner_book_id?: string | null;
@@ -165,7 +165,7 @@ export interface Database {
         Update: {
           id?: string;
           club_id?: string;
-          status?: "open" | "closed" | "done";
+          status?: "proposing" | "voting" | "closed" | "done";
           opened_at?: string;
           closed_at?: string | null;
           winner_book_id?: string | null;

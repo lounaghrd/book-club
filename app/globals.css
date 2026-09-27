@@ -829,19 +829,17 @@ header {
   color: var(--accent);
 }
 
-/* Voting session ("Next book"). Idle and winner states reuse the hero's surface
-   panel; the open state and results reuse the book-list rows. */
+/* Voting session ("Next book"): suggestions → vote → results. Idle,
+   suggestions and winner use the hero's surface panel; the vote and results
+   lists reuse the book-list rows. */
 .vote-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   padding: 22px 22px 24px;
   margin-bottom: 40px;
 }
-.vote-panel.nudge,
 .vote-panel.winner {
   border-color: var(--accent);
-}
-.vote-panel.winner {
   margin-bottom: 20px;
 }
 .vote-panel-title {
@@ -850,74 +848,112 @@ header {
   letter-spacing: -0.03em;
   font-variation-settings: "wdth" 85;
   line-height: 1.05;
+  margin-bottom: 18px;
   word-break: break-word;
 }
 .vote-panel-author {
   font-size: 15px;
   color: var(--text-soft);
-  margin-top: 6px;
+  margin: -12px 0 18px;
 }
-.vote-panel-sub {
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--text-soft);
-  margin: 10px 0 18px;
+.btn-block {
+  display: block;
+  width: 100%;
 }
-.winner-actions {
+.btn-block + .btn-block {
+  margin-top: 8px;
+}
+.vote-mine {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border-strong);
+  padding: 12px 12px 12px 14px;
+}
+.vote-mine-info {
+  flex: 1;
+  min-width: 0;
+}
+.vote-mine-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 3px;
+}
+.vote-mine-title {
+  font-size: 16px;
+  font-weight: 600;
+  word-break: break-word;
+}
+/* Quiet text button that moves the session to its next stage. */
+.vote-advance {
+  display: block;
+  margin: 18px auto 0;
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.vote-advance:hover {
+  color: var(--text);
 }
 .vote-section {
   margin-bottom: 40px;
 }
-.vote-live {
-  color: var(--accent);
-}
-.vote-stats {
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-.vote-status {
+.vote-hint {
   font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 16px;
-  word-break: break-word;
+  color: var(--text-soft);
+  margin: -8px 0 14px;
 }
-.vote-status.pending {
-  color: var(--accent);
-}
-.vote-footer {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-.rank {
-  width: 18px;
-  flex-shrink: 0;
-  font-size: 13px;
+.vote-tally {
+  min-width: 36px;
+  text-align: right;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--muted);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
-/* Read-only tally (results): same pill shape, no interaction. */
+
+/* Read-only tally in the book card once voting has closed. */
 .vote-btn.static {
   cursor: default;
+  pointer-events: none;
 }
-.vote-btn.static:active {
-  transform: none;
-}
-.vote-btn.static:hover {
-  border-color: var(--border);
+
+/* Read history: a single collapsed row until tapped. */
+.read-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--text-soft);
+  cursor: pointer;
 }
-.vote-btn.static.voted:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
+.read-toggle-count {
+  color: var(--muted);
+}
+.read-section .book-list {
+  border-top: none;
 }
 
 .hero-clickable,

@@ -10,7 +10,6 @@ import PinModal, { type PinTarget } from "./pin-modal";
 import UserPicker from "./user-picker";
 import ConfirmDialog from "./confirm-dialog";
 import Voting, { type Entry } from "./voting";
-import { PlusIcon } from "./icons";
 import type {
   Book,
   CurrentReading,
@@ -34,7 +33,6 @@ type NominationVoteRow = Database["public"]["Tables"]["nomination_votes"]["Row"]
 import {
   clearCurrent,
   deleteBook,
-  deleteNomination,
   deleteNominationVote,
   deleteReadBefore,
   deleteSession,
@@ -303,14 +301,13 @@ export default function BookClub({
       out.push({
         nomination: n,
         book,
-        nominatorName: users.find((u) => u.id === n.userId)?.name ?? null,
         votes: counts.get(n.id) ?? 0,
         voted: mine.has(n.id),
         readBefore: readBeforeCounts.get(book.id) ?? 0,
       });
     }
     return out.sort((a, b) => a.nomination.createdAt - b.nomination.createdAt);
-  }, [session, sessionVotes, nominations, books, users, currentUserId, readBeforeCounts]);
+  }, [session, sessionVotes, nominations, books, currentUserId, readBeforeCounts]);
   const voterCount = useMemo(
     () => new Set(sessionVotes.map((v) => v.userId)).size,
     [sessionVotes],
@@ -319,17 +316,12 @@ export default function BookClub({
     ? entries.find((e) => e.nomination.userId === currentUserId) ?? null
     : null;
 
-  let nudge: string | null = null;
+  // Colour the "Open suggestions" button when it's time to pick: nothing pinned,
+  // or the meeting is within NUDGE_DAYS (or past).
+  let nudge = false;
   if (mounted && !session) {
     const days = current?.meetingDate ? daysUntil(current.meetingDate) : null;
-    if (!currentBook) nudge = "Time to pick the next book";
-    else if (days !== null && days <= NUDGE_DAYS)
-      nudge =
-        days > 1
-          ? `Meeting in ${days} days — time to vote`
-          : days >= 0
-            ? "Meeting soon — time to vote"
-            : "Time to pick the next book";
+    nudge = !currentBook || (days !== null && days <= NUDGE_DAYS);
   }
 
   // Derive the open card's book from live state so realtime edits flow through and a
@@ -339,13 +331,13 @@ export default function BookClub({
   let cardContext: CardContext = "other";
   if (cardBook) {
     if (cardBook.id === current?.bookId) cardContext = "current";
-    else if (cardEntry) cardContext = session?.status === "open" ? "nomination" : "result";
+    else if (cardEntry) cardContext = "nomination";
     else if (cardBook.read) cardContext = "read";
   }
   const cardVote = useMemo<CardVote | null>(() => {
-    if (!cardEntry || !session) return null;
-    const open = session.status === "open";
-    return { count: open ? null : cardEntry.votes, voted: cardEntry.voted, canVote: open };
+    if (!cardEntry || !session || session.status === "proposing") return null;
+    const voting = session.status === "voting";
+    return { count: voting ? null : cardEntry.votes, voted: cardEntry.voted, canVote: voting };
   }, [cardEntry, session]);
 
   function selectUser(userId: string) {
@@ -420,7 +412,7 @@ export default function BookClub({
     }
   }
 
-  function openNominate() {
+  function openSuggest() {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
@@ -428,14 +420,14 @@ export default function BookClub({
     setAddOpen(true);
   }
 
-  // Put a book forward for the open vote. A member has one nomination per
-  // session, so this swaps out any existing pick (and its votes).
+  // Add the member's one suggestion for this session. Changing it afterwards is
+  // a plain book edit (openEdit), so there's never more than one per person.
   async function nominate(data: { title: string; author: string; note: string }) {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
     }
-    if (!session || session.status !== "open") return;
+    if (!session || session.status !== "proposing" || myEntry) return;
     const book: Book = {
       id: crypto.randomUUID(),
       title: data.title,
@@ -453,37 +445,16 @@ export default function BookClub({
       userId: currentUserId,
       createdAt: Date.now(),
     };
-    const old = myEntry?.nomination ?? null;
-    const prevBooks = books;
-    const prevNoms = nominations;
-    const prevNomVotes = nomVotes;
     setBooks((bs) => [book, ...bs]);
-    setNominations((ns) => [...ns.filter((n) => n.id !== old?.id), nomination]);
-    if (old) setNomVotes((vs) => vs.filter((v) => v.nominationId !== old.id));
+    setNominations((ns) => [...ns, nomination]);
     setAddOpen(false);
     try {
-      if (old) await deleteNomination(supabase, old.id);
       await insertBook(supabase, book);
       await insertNomination(supabase, nomination);
     } catch (e) {
-      console.error("Failed to nominate", e);
-      setBooks(prevBooks);
-      setNominations(prevNoms);
-      setNomVotes(prevNomVotes);
-    }
-  }
-
-  async function withdrawNomination(nominationId: string) {
-    const prevNoms = nominations;
-    const prevNomVotes = nomVotes;
-    setNominations((ns) => ns.filter((n) => n.id !== nominationId));
-    setNomVotes((vs) => vs.filter((v) => v.nominationId !== nominationId));
-    try {
-      await deleteNomination(supabase, nominationId);
-    } catch (e) {
-      console.error("Failed to withdraw nomination", e);
-      setNominations(prevNoms);
-      setNomVotes(prevNomVotes);
+      console.error("Failed to add suggestion", e);
+      setBooks((bs) => bs.filter((b) => b.id !== book.id));
+      setNominations((ns) => ns.filter((n) => n.id !== nomination.id));
     }
   }
 
@@ -492,7 +463,7 @@ export default function BookClub({
       setPickerOpen(true);
       return;
     }
-    if (!session || session.status !== "open") return;
+    if (!session || session.status !== "voting") return;
     const existing = sessionVotes.find(
       (v) => v.nominationId === nominationId && v.userId === currentUserId,
     );
@@ -541,11 +512,11 @@ export default function BookClub({
     }
   }
 
-  async function openVoting() {
+  async function openSuggestions() {
     if (session) return;
     const next: VotingSession = {
       id: crypto.randomUUID(),
-      status: "open",
+      status: "proposing",
       openedAt: Date.now(),
       closedAt: null,
       winnerBookId: null,
@@ -554,44 +525,36 @@ export default function BookClub({
     try {
       await insertSession(supabase, next);
     } catch (e) {
-      console.error("Failed to open voting", e);
+      console.error("Failed to open suggestions", e);
       await resyncSession();
     }
   }
 
-  // Close with nominations → results; close with none → just cancel the session.
-  async function closeVoting() {
+  // Move to the next stage: suggestions → voting → results. Closing suggestions
+  // with nobody having suggested anything just cancels the session.
+  async function advanceSession() {
     setCloseConfirmOpen(false);
-    if (!session || session.status !== "open") return;
+    if (!session) return;
     const prev = session;
-    if (entries.length === 0) {
+    if (prev.status === "proposing" && entries.length === 0) {
       setSession(null);
       try {
         await deleteSession(supabase, prev.id);
       } catch (e) {
-        console.error("Failed to cancel voting", e);
+        console.error("Failed to cancel session", e);
         await resyncSession();
       }
       return;
     }
-    const next: VotingSession = { ...prev, status: "closed", closedAt: Date.now() };
+    let next: VotingSession;
+    if (prev.status === "proposing") next = { ...prev, status: "voting" };
+    else if (prev.status === "voting") next = { ...prev, status: "closed", closedAt: Date.now() };
+    else return;
     setSession(next);
     try {
       await updateSession(supabase, next.id, next);
     } catch (e) {
-      console.error("Failed to close voting", e);
-      await resyncSession();
-    }
-  }
-
-  async function reopenVoting() {
-    if (!session || session.status !== "closed") return;
-    const next: VotingSession = { ...session, status: "open", closedAt: null };
-    setSession(next);
-    try {
-      await updateSession(supabase, next.id, next);
-    } catch (e) {
-      console.error("Failed to reopen voting", e);
+      console.error("Failed to advance session", e);
       await resyncSession();
     }
   }
@@ -769,6 +732,17 @@ export default function BookClub({
     action();
   }
 
+  const advanceCopy =
+    session?.status === "voting"
+      ? { title: "Close voting?", message: "Everyone will see the results.", confirm: "Close voting" }
+      : entries.length === 0
+        ? { title: "Cancel?", message: "Nobody has suggested a book yet.", confirm: "Cancel" }
+        : {
+            title: "Start voting?",
+            message: "Suggestions will close and everyone can vote.",
+            confirm: "Start voting",
+          };
+
   // Only surface the install prompt once a user is selected, so two sheets don't stack.
   const showInstallPrompt = currentUserId !== undefined && currentUserId !== null && !pickerOpen;
 
@@ -803,25 +777,18 @@ export default function BookClub({
           entries={entries}
           voterCount={voterCount}
           myEntry={myEntry}
-          hasUser={!!currentUserId}
           nudge={nudge}
-          onOpenVoting={openVoting}
+          onOpen={openSuggestions}
+          onSuggest={openSuggest}
+          onEditMine={() => myEntry && openEdit(myEntry.book.id)}
           onOpenCard={setCardBookId}
           onVote={toggleNomVote}
-          onClose={() => setCloseConfirmOpen(true)}
-          onReopen={reopenVoting}
+          onAdvance={() => setCloseConfirmOpen(true)}
           onStart={openPin}
         />
 
         <BookList books={books} onOpen={setCardBookId} />
       </div>
-
-      {session?.status === "open" ? (
-        <button className="fab" onClick={openNominate}>
-          <PlusIcon />
-          {myEntry ? "Change my pick" : "Nominate a book"}
-        </button>
-      ) : null}
 
       <BookCard
         book={cardBook}
@@ -836,15 +803,11 @@ export default function BookClub({
         onEdit={() => cardBook && runCardAction(() => openEdit(cardBook.id))}
         onFinish={() => runCardAction(finishCurrent)}
         onUnpin={() => runCardAction(unpin)}
-        onWithdraw={() =>
-          cardEntry && runCardAction(() => withdrawNomination(cardEntry.nomination.id))
-        }
         onRemove={() => cardBook && runCardAction(() => removeBook(cardBook.id))}
       />
 
       <AddModal
         open={addOpen}
-        replacing={myEntry?.book.title ?? null}
         onClose={() => setAddOpen(false)}
         onSubmit={nominate}
       />
@@ -860,15 +823,11 @@ export default function BookClub({
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
       <ConfirmDialog
         open={closeConfirmOpen}
-        title={entries.length === 0 ? "Cancel voting?" : "Close voting?"}
-        message={
-          entries.length === 0
-            ? "Nobody has nominated a book yet. This cancels the vote; you can open a new one any time."
-            : "Nominations and votes will be locked and everyone will see the results. You can reopen it if needed."
-        }
-        confirmLabel={entries.length === 0 ? "Cancel voting" : "Close voting"}
+        title={advanceCopy.title}
+        message={advanceCopy.message}
+        confirmLabel={advanceCopy.confirm}
         cancelLabel="Not yet"
-        onConfirm={closeVoting}
+        onConfirm={advanceSession}
         onCancel={() => setCloseConfirmOpen(false)}
       />
       <UserPicker

@@ -1,56 +1,41 @@
 "use client";
 
+import { useState } from "react";
 import type { Book } from "@/lib/types";
-import { ExpandIcon } from "./icons";
 
 type Props = {
   books: Book[];
   onOpen: (bookId: string) => void;
 };
 
-// History of books the club has finished, newest first. Candidates for the next
-// book live in the voting section, not here.
+// History of books the club has finished, newest first. Collapsed by default to
+// keep the main screen focused on the current book and the vote.
 export default function BookList({ books, onOpen }: Props) {
+  const [open, setOpen] = useState(false);
   const read = books.filter((b) => b.read).sort((a, b) => b.addedAt - a.addedAt);
+  if (read.length === 0) return null;
 
   return (
     <section className="read-section">
-      <div className="section-header">
-        <div className="section-title">Read</div>
-        <div className="section-count">
-          {read.length} {read.length === 1 ? "book" : "books"}
-        </div>
-      </div>
+      <button className="read-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <span>Books we&apos;ve read</span>
+        <span className="read-toggle-count">
+          {read.length} {open ? "▴" : "▾"}
+        </span>
+      </button>
 
-      <div className="book-list">
-        {read.length === 0 ? (
-          <div className="empty">No books read yet.</div>
-        ) : (
-          read.map((book) => (
+      {open ? (
+        <div className="book-list">
+          {read.map((book) => (
             <div key={book.id} className="book book-clickable read" onClick={() => onOpen(book.id)}>
               <div className="book-info">
                 <div className="book-title">{book.title}</div>
                 {book.author ? <div className="book-author">{book.author}</div> : null}
-                {book.suggestedByName ? (
-                  <div className="book-meta">By {book.suggestedByName}</div>
-                ) : null}
-              </div>
-              <div className="book-actions">
-                <button
-                  className="icon-btn"
-                  aria-label={`Open details for ${book.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpen(book.id);
-                  }}
-                >
-                  <ExpandIcon />
-                </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

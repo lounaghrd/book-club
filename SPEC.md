@@ -9,9 +9,9 @@ A mobile-first web app for a small book club. Anyone with the link can run a vot
 ## Core features
 
 1. **Currently reading** — pinned at top of the page. Shows title, author, days-until-meeting countdown, and meeting date. Tapping it opens the book card (below), which holds the actions.
-2. **Voting sessions ("Next book")** — replaced the original always-on reading list. When the current book is nearly done, anyone opens a vote (the app nudges when the meeting is ≤ 7 days away). While it's open, every member nominates exactly one book (title + optional author + optional note on why) and can change it. To bring back an old favourite, they just type it again. Everyone upvotes as many nominations as they like; tallies stay hidden until someone closes the vote. Results rank by votes, then fewer "already read it" marks, and the group starts the winner (picking a meeting date), which finishes the previous book. Each session starts from scratch: a book only competes if someone re-nominates it.
-3. **Book card** — a bottom-sheet detail view, opened from the hero, a nomination, a result, or the Read history. Shows title, author, who suggested it, their note, and (for nominations) a vote pill. A kebab (⋮) holds context-dependent actions: current book → change date, edit, mark finished, unpin; nomination → edit, withdraw; read book → edit, delete.
-4. **Read history** — finished books, newest first.
+2. **Voting sessions ("Next book")** — replaced the original always-on reading list. When the current book is nearly done, anyone opens suggestions (the button is highlighted when the meeting is ≤ 7 days away). **Stage 1 — suggestions:** every member adds exactly one book (title + optional author + optional note on why). Nobody sees the others' suggestions, only how many have been made; you can edit your own. Someone closes suggestions once everyone has proposed. **Stage 2 — voting:** the full list is revealed and everyone upvotes as many as they like; totals stay hidden. Someone closes voting. **Results:** the winner (most votes, then fewer "already read it" marks; a remaining tie is left to the group) with every book's count, and a "Start reading" button that sets the meeting date and finishes the previous book. Each session starts from scratch. The screen stays minimal: one panel or list per stage.
+3. **Book card** — a bottom-sheet detail view, opened from the hero, a book in the vote, or the Read history. Shows title, author, who suggested it, their note, and (for books in the vote) a vote pill. A kebab (⋮) holds context-dependent actions: current book → change date, edit, mark finished, unpin; read book → edit, delete. Books in the vote have no actions — view and vote only.
+4. **Read history** — finished books, newest first, collapsed behind a single row.
 5. **Identity ("who's reading")** — on first visit a blocking picker asks the visitor to choose their name from a shared list or add a new one; the choice is persisted locally and shown as a header chip that re-opens the picker so anyone can switch. Users can be renamed or removed (rename updates the name everywhere; removal keeps a person's past suggestions, frozen under their last name). Attribution only — not a security boundary.
 6. **Votes** — upvote-only, one per picked user per nomination, as many nominations as you like. Soft dedup, not a security boundary. (Originally always-on upvotes on the reading list; replaced by voting sessions.)
 7. **"Already read it"** — inside the book card, a member can mark that they've *already read* a book before (separate from the club-wide finished flag). It shows a count of how many members have read it, so the group can avoid picking something most people already know. It's the first tie-break in vote results: among nominations with equal votes, the one fewer members have already read wins. One marker per picked user per book; same soft dedup as votes.
@@ -47,7 +47,7 @@ User {
 
 VotingSession {
   id: string           // uuid
-  status: "open" | "closed" | "done"
+  status: "proposing" | "voting" | "closed" | "done"
   openedAt: timestamp
   closedAt?: timestamp
   winnerBookId?: string // FK to Book, set when the winner is started

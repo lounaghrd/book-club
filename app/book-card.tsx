@@ -5,12 +5,12 @@ import type { Book } from "@/lib/types";
 import { CheckIcon, KebabIcon, UpvoteIcon } from "./icons";
 
 // Where the card was opened from decides its actions:
-// current → the pinned book; nomination → a pick in the open vote; result → a
-// pick in a closed vote; read → the club's history; other → anything else.
-export type CardContext = "current" | "nomination" | "result" | "read" | "other";
+// current → the pinned book; nomination → a book in the vote (no actions, just
+// the vote); read → the club's history; other → anything else.
+export type CardContext = "current" | "nomination" | "read" | "other";
 
-// Nomination vote shown in the card. count is null while voting is open (tallies
-// stay hidden until it closes); canVote is false once it's closed.
+// Vote shown in the card for a book in the vote. count is null while voting
+// (tallies stay hidden until it closes); canVote is false once it's closed.
 export type CardVote = { count: number | null; voted: boolean; canVote: boolean };
 
 type Props = {
@@ -26,7 +26,6 @@ type Props = {
   onEdit: () => void;
   onFinish: () => void;
   onUnpin: () => void;
-  onWithdraw: () => void;
   onRemove: () => void;
 };
 
@@ -43,7 +42,6 @@ export default function BookCard({
   onEdit,
   onFinish,
   onUnpin,
-  onWithdraw,
   onRemove,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,6 +70,8 @@ export default function BookCard({
   const display = book ?? snapshot?.book ?? null;
   const displayContext = book ? context : snapshot?.context ?? "other";
   const displayVote = book ? vote : snapshot?.vote ?? null;
+  // Books in a vote are view-and-vote only.
+  const hasActions = displayContext !== "nomination";
   const displayReadBeforeCount = book ? readBeforeCount : snapshot?.readBeforeCount ?? 0;
   const displayReadBefore = book ? hasReadBefore : snapshot?.hasReadBefore ?? false;
 
@@ -107,18 +107,20 @@ export default function BookCard({
         <div className="modal-handle" />
         {display ? (
           <>
-            <button
-              ref={btnRef}
-              className="hero-menu-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen((o) => !o);
-              }}
-              aria-label="Actions"
-              aria-expanded={menuOpen}
-            >
-              <KebabIcon />
-            </button>
+            {hasActions ? (
+              <button
+                ref={btnRef}
+                className="hero-menu-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen((o) => !o);
+                }}
+                aria-label="Actions"
+                aria-expanded={menuOpen}
+              >
+                <KebabIcon />
+              </button>
+            ) : null}
 
             <div className="book-card-title">{display.title}</div>
             <div className="book-card-author">{display.author || "Unknown author"}</div>
@@ -190,36 +192,31 @@ export default function BookCard({
               {display.note || "No note yet."}
             </div>
 
-            <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
-              <div className="book-card-menu-inner">
-                {displayContext === "current" ? (
-                  <>
-                    <button onClick={() => runAction(onReschedule)}>Change date</button>
+            {hasActions ? (
+              <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
+                <div className="book-card-menu-inner">
+                  {displayContext === "current" ? (
+                    <>
+                      <button onClick={() => runAction(onReschedule)}>Change date</button>
+                      <button onClick={() => runAction(onEdit)}>Edit</button>
+                      <button onClick={() => runAction(onFinish)}>Mark finished</button>
+                      <button className="danger" onClick={() => runAction(onUnpin)}>
+                        Unpin
+                      </button>
+                    </>
+                  ) : displayContext === "read" ? (
+                    <>
+                      <button onClick={() => runAction(onEdit)}>Edit</button>
+                      <button className="danger" onClick={() => runAction(onRemove)}>
+                        Delete
+                      </button>
+                    </>
+                  ) : (
                     <button onClick={() => runAction(onEdit)}>Edit</button>
-                    <button onClick={() => runAction(onFinish)}>Mark finished</button>
-                    <button className="danger" onClick={() => runAction(onUnpin)}>
-                      Unpin
-                    </button>
-                  </>
-                ) : displayContext === "nomination" ? (
-                  <>
-                    <button onClick={() => runAction(onEdit)}>Edit</button>
-                    <button className="danger" onClick={() => runAction(onWithdraw)}>
-                      Withdraw nomination
-                    </button>
-                  </>
-                ) : displayContext === "read" ? (
-                  <>
-                    <button onClick={() => runAction(onEdit)}>Edit</button>
-                    <button className="danger" onClick={() => runAction(onRemove)}>
-                      Delete
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => runAction(onEdit)}>Edit</button>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
           </>
         ) : null}
       </div>
