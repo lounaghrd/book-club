@@ -130,62 +130,40 @@ export default function BookCard({
             ) : null}
 
             {displayVote ? (
-              <div className="book-card-vote">
+              <>
                 {displayVote.canVote ? (
-                  <button
-                    className={`vote-btn${displayVote.voted ? " voted" : ""}`}
-                    aria-label={displayVote.voted ? "Remove your vote" : "Vote for this book"}
-                    aria-pressed={displayVote.voted}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onVote();
-                    }}
-                  >
-                    <UpvoteIcon />
-                  </button>
-                ) : (
-                  <span className={`vote-btn static${displayVote.voted ? " voted" : ""}`}>
-                    <UpvoteIcon />
-                    {displayVote.count !== null ? (
-                      <span className="vote-count">{displayVote.count}</span>
-                    ) : null}
-                  </span>
-                )}
-                <span className="book-card-vote-label">
-                  {displayVote.count !== null
-                    ? displayVote.count === 1
-                      ? "1 vote"
-                      : `${displayVote.count} votes`
-                    : displayVote.voted
-                      ? "You voted for it"
-                      : "Tap to vote"}
-                </span>
-              </div>
+                  <div className="card-toggles">
+                    <button
+                      className={`card-toggle${displayVote.voted ? " on accent" : ""}`}
+                      aria-pressed={displayVote.voted}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onVote();
+                      }}
+                    >
+                      <UpvoteIcon />
+                      {displayVote.voted ? "Voted" : "Vote"}
+                    </button>
+                    <button
+                      className={`card-toggle${displayReadBefore ? " on" : ""}`}
+                      aria-pressed={displayReadBefore}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReadBefore();
+                      }}
+                    >
+                      <CheckIcon />
+                      I&apos;ve read it
+                    </button>
+                  </div>
+                ) : null}
+                {cardCaption(displayVote.count, displayReadBeforeCount) ? (
+                  <div className="card-caption">
+                    {cardCaption(displayVote.count, displayReadBeforeCount)}
+                  </div>
+                ) : null}
+              </>
             ) : null}
-
-            <div className="book-card-read">
-              <button
-                className={`read-btn${displayReadBefore ? " marked" : ""}`}
-                aria-label={
-                  displayReadBefore ? "I haven't read this before" : "I've read this before"
-                }
-                aria-pressed={displayReadBefore}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReadBefore();
-                }}
-              >
-                <CheckIcon />
-                <span className="vote-count">{displayReadBeforeCount}</span>
-              </button>
-              <span className="book-card-vote-label">
-                {displayReadBeforeCount === 0
-                  ? "Nobody's read it yet"
-                  : displayReadBeforeCount === 1
-                    ? "1 has read it"
-                    : `${displayReadBeforeCount} have read it`}
-              </span>
-            </div>
 
             <div className="book-card-note-label">Why this book</div>
             <div className={`book-card-note${display.note ? "" : " empty"}`}>
@@ -222,4 +200,16 @@ export default function BookCard({
       </div>
     </div>
   );
+}
+
+// One quiet line under the card's buttons: the vote total (only once voting has
+// closed) and how many members have already read the book.
+function cardCaption(votes: number | null, readBefore: number): string {
+  const parts: string[] = [];
+  if (votes !== null) parts.push(votes === 1 ? "1 vote" : `${votes} votes`);
+  if (readBefore > 0)
+    parts.push(
+      readBefore === 1 ? "1 member has already read it" : `${readBefore} members have already read it`,
+    );
+  return parts.join(" · ");
 }

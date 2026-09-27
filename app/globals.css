@@ -727,58 +727,52 @@ header {
   color: var(--muted);
   font-style: italic;
 }
-.book-card-vote {
+/* Vote / "I've read it" toggles in the book card (books in the vote only).
+   Labelled buttons so they read as actions: outlined when off, filled when on —
+   accent for the vote, neutral for "I've read it". */
+.card-toggles {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 8px;
   margin-top: 20px;
 }
-.book-card-vote-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--muted);
-  font-weight: 600;
-}
-
-/* "I've read this before" pill: a check + count, sibling to the upvote pill.
-   Shares the upvote pill's outlined base but fills neutral (not accent) when
-   marked, so the two controls stay visually distinct. */
-.book-card-read {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
-.read-btn {
-  height: 36px;
-  padding: 0 10px;
+.card-toggle {
+  flex: 1;
+  height: 46px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 8px;
   background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-soft);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
   font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   cursor: pointer;
   transition: all 0.12s;
-  flex-shrink: 0;
 }
-.read-btn:active {
-  transform: scale(0.94);
+.card-toggle:active {
+  transform: scale(0.97);
 }
-.read-btn:hover {
-  border-color: var(--border-strong);
-  color: var(--text);
+.card-toggle svg {
+  width: 15px;
+  height: 15px;
 }
-.read-btn svg {
-  width: 14px;
-  height: 14px;
-}
-.read-btn.marked {
+.card-toggle.on {
   background: var(--text);
   border-color: var(--text);
   color: var(--bg);
+}
+.card-toggle.on.accent {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.card-caption {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-top: 12px;
 }
 
 /* Actions revealed inline by the card's kebab. Inline (not a floating dropdown)
@@ -925,12 +919,6 @@ header {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
-}
-
-/* Read-only tally in the book card once voting has closed. */
-.vote-btn.static {
-  cursor: default;
-  pointer-events: none;
 }
 
 /* Read history: a single collapsed row until tapped. */
