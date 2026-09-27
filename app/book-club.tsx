@@ -319,22 +319,6 @@ export default function BookClub({
     ? entries.find((e) => e.nomination.userId === currentUserId) ?? null
     : null;
 
-  // Your own earlier suggestions that could be re-nominated: unfinished, not the
-  // current book, and not already in this vote.
-  const pastPicks = useMemo(() => {
-    if (!currentUserId) return [];
-    const nominated = new Set(entries.map((e) => e.book.id));
-    return books
-      .filter(
-        (b) =>
-          b.suggestedByUserId === currentUserId &&
-          !b.read &&
-          b.id !== current?.bookId &&
-          !nominated.has(b.id),
-      )
-      .sort((a, b) => b.addedAt - a.addedAt);
-  }, [books, currentUserId, current, entries]);
-
   let nudge: string | null = null;
   if (mounted && !session) {
     const days = current?.meetingDate ? daysUntil(current.meetingDate) : null;
@@ -446,30 +430,26 @@ export default function BookClub({
 
   // Put a book forward for the open vote. A member has one nomination per
   // session, so this swaps out any existing pick (and its votes).
-  async function nominate(pick: { bookId: string } | { title: string; author: string; note: string }) {
+  async function nominate(data: { title: string; author: string; note: string }) {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
     }
     if (!session || session.status !== "open") return;
-    let newBook: Book | null = null;
-    if (!("bookId" in pick)) {
-      newBook = {
-        id: crypto.randomUUID(),
-        title: pick.title,
-        author: pick.author || null,
-        suggestedByUserId: currentUserId,
-        suggestedByName: currentUser?.name ?? null,
-        note: pick.note || null,
-        read: false,
-        addedAt: Date.now(),
-      };
-    }
-    const bookId = newBook ? newBook.id : (pick as { bookId: string }).bookId;
+    const book: Book = {
+      id: crypto.randomUUID(),
+      title: data.title,
+      author: data.author || null,
+      suggestedByUserId: currentUserId,
+      suggestedByName: currentUser?.name ?? null,
+      note: data.note || null,
+      read: false,
+      addedAt: Date.now(),
+    };
     const nomination: Nomination = {
       id: crypto.randomUUID(),
       sessionId: session.id,
-      bookId,
+      bookId: book.id,
       userId: currentUserId,
       createdAt: Date.now(),
     };
@@ -477,13 +457,13 @@ export default function BookClub({
     const prevBooks = books;
     const prevNoms = nominations;
     const prevNomVotes = nomVotes;
-    if (newBook) setBooks((bs) => [newBook, ...bs]);
+    setBooks((bs) => [book, ...bs]);
     setNominations((ns) => [...ns.filter((n) => n.id !== old?.id), nomination]);
     if (old) setNomVotes((vs) => vs.filter((v) => v.nominationId !== old.id));
     setAddOpen(false);
     try {
       if (old) await deleteNomination(supabase, old.id);
-      if (newBook) await insertBook(supabase, newBook);
+      await insertBook(supabase, book);
       await insertNomination(supabase, nomination);
     } catch (e) {
       console.error("Failed to nominate", e);
@@ -864,9 +844,7 @@ export default function BookClub({
 
       <AddModal
         open={addOpen}
-        pastPicks={pastPicks}
         replacing={myEntry?.book.title ?? null}
-        onPickPast={(bookId) => nominate({ bookId })}
         onClose={() => setAddOpen(false)}
         onSubmit={nominate}
       />

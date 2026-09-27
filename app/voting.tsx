@@ -51,8 +51,8 @@ function Idle({ nudge, onOpenVoting }: Props) {
       <div className="hero-label">Next book</div>
       <div className="vote-panel-title">{nudge ?? "Voting is closed"}</div>
       <div className="vote-panel-sub">
-        Open a vote when the current book is nearly done. Everyone nominates one book — new or
-        one they&apos;ve suggested before — then everyone upvotes.
+        Open a vote when the current book is nearly done. Everyone nominates one book, then
+        everyone upvotes.
       </div>
       <button className={`btn${nudge ? " btn-danger" : ""}`} onClick={onOpenVoting}>
         Open voting
