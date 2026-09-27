@@ -4,40 +4,43 @@ import { useEffect, useRef, useState } from "react";
 import type { Book } from "@/lib/types";
 import { CheckIcon, KebabIcon, UpvoteIcon } from "./icons";
 
+// Where the card was opened from decides its actions:
+// current → the pinned book; nomination → a book in the vote (no actions, just
+// the vote); read → the club's history; other → anything else.
+export type CardContext = "current" | "nomination" | "read" | "other";
+
+// Vote shown in the card for a book in the vote. count is null while voting
+// (tallies stay hidden until it closes); canVote is false once it's closed.
+export type CardVote = { count: number | null; voted: boolean; canVote: boolean };
+
 type Props = {
   book: Book | null;
-  isPinned: boolean;
-  voteCount: number;
-  hasVoted: boolean;
+  context: CardContext;
+  vote: CardVote | null;
   onVote: () => void;
   readBeforeCount: number;
   hasReadBefore: boolean;
   onReadBefore: () => void;
   onClose: () => void;
-  onPin: () => void;
   onReschedule: () => void;
   onEdit: () => void;
   onFinish: () => void;
-  onToggleRead: () => void;
   onUnpin: () => void;
   onRemove: () => void;
 };
 
 export default function BookCard({
   book,
-  isPinned,
-  voteCount,
-  hasVoted,
+  context,
+  vote,
   onVote,
   readBeforeCount,
   hasReadBefore,
   onReadBefore,
   onClose,
-  onPin,
   onReschedule,
   onEdit,
   onFinish,
-  onToggleRead,
   onUnpin,
   onRemove,
 }: Props) {
@@ -47,9 +50,8 @@ export default function BookCard({
   // card would slide out blank).
   const [snapshot, setSnapshot] = useState<{
     book: Book;
-    isPinned: boolean;
-    voteCount: number;
-    hasVoted: boolean;
+    context: CardContext;
+    vote: CardVote | null;
     readBeforeCount: number;
     hasReadBefore: boolean;
   } | null>(null);
@@ -60,15 +62,16 @@ export default function BookCard({
 
   useEffect(() => {
     if (book) {
-      setSnapshot({ book, isPinned, voteCount, hasVoted, readBeforeCount, hasReadBefore });
+      setSnapshot({ book, context, vote, readBeforeCount, hasReadBefore });
     }
-  }, [book, isPinned, voteCount, hasVoted, readBeforeCount, hasReadBefore]);
+  }, [book, context, vote, readBeforeCount, hasReadBefore]);
 
   // Use the live book while open, the snapshot while closing.
   const display = book ?? snapshot?.book ?? null;
-  const displayPinned = book ? isPinned : snapshot?.isPinned ?? false;
-  const displayVoteCount = book ? voteCount : snapshot?.voteCount ?? 0;
-  const displayVoted = book ? hasVoted : snapshot?.hasVoted ?? false;
+  const displayContext = book ? context : snapshot?.context ?? "other";
+  const displayVote = book ? vote : snapshot?.vote ?? null;
+  // Books in a vote are view-and-vote only.
+  const hasActions = displayContext !== "nomination";
   const displayReadBeforeCount = book ? readBeforeCount : snapshot?.readBeforeCount ?? 0;
   const displayReadBefore = book ? hasReadBefore : snapshot?.hasReadBefore ?? false;
 
@@ -104,18 +107,20 @@ export default function BookCard({
         <div className="modal-handle" />
         {display ? (
           <>
-            <button
-              ref={btnRef}
-              className="hero-menu-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen((o) => !o);
-              }}
-              aria-label="Actions"
-              aria-expanded={menuOpen}
-            >
-              <KebabIcon />
-            </button>
+            {hasActions ? (
+              <button
+                ref={btnRef}
+                className="hero-menu-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen((o) => !o);
+                }}
+                aria-label="Actions"
+                aria-expanded={menuOpen}
+              >
+                <KebabIcon />
+              </button>
+            ) : null}
 
             <div className="book-card-title">{display.title}</div>
             <div className="book-card-author">{display.author || "Unknown author"}</div>
@@ -124,83 +129,87 @@ export default function BookCard({
               <div className="book-card-suggester">Suggested by {display.suggestedByName}</div>
             ) : null}
 
-            <div className="book-card-vote">
-              <button
-                className={`vote-btn${displayVoted ? " voted" : ""}`}
-                aria-label={displayVoted ? "Remove your upvote" : "Upvote this book"}
-                aria-pressed={displayVoted}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onVote();
-                }}
-              >
-                <UpvoteIcon />
-                <span className="vote-count">{displayVoteCount}</span>
-              </button>
-              <span className="book-card-vote-label">
-                {displayVoteCount === 1 ? "1 upvote" : `${displayVoteCount} upvotes`}
-              </span>
-            </div>
-
-            <div className="book-card-read">
-              <button
-                className={`read-btn${displayReadBefore ? " marked" : ""}`}
-                aria-label={
-                  displayReadBefore ? "I haven't read this before" : "I've read this before"
-                }
-                aria-pressed={displayReadBefore}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onReadBefore();
-                }}
-              >
-                <CheckIcon />
-                <span className="vote-count">{displayReadBeforeCount}</span>
-              </button>
-              <span className="book-card-vote-label">
-                {displayReadBeforeCount === 0
-                  ? "Nobody's read it yet"
-                  : displayReadBeforeCount === 1
-                    ? "1 has read it"
-                    : `${displayReadBeforeCount} have read it`}
-              </span>
-            </div>
+            {displayVote ? (
+              <>
+                {displayVote.canVote ? (
+                  <div className="card-toggles">
+                    <button
+                      className={`card-toggle${displayVote.voted ? " on accent" : ""}`}
+                      aria-pressed={displayVote.voted}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onVote();
+                      }}
+                    >
+                      <UpvoteIcon />
+                      {displayVote.voted ? "Voted" : "Vote"}
+                    </button>
+                    <button
+                      className={`card-toggle${displayReadBefore ? " on" : ""}`}
+                      aria-pressed={displayReadBefore}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onReadBefore();
+                      }}
+                    >
+                      <CheckIcon />
+                      I&apos;ve read it
+                    </button>
+                  </div>
+                ) : null}
+                {cardCaption(displayVote.count, displayReadBeforeCount) ? (
+                  <div className="card-caption">
+                    {cardCaption(displayVote.count, displayReadBeforeCount)}
+                  </div>
+                ) : null}
+              </>
+            ) : null}
 
             <div className="book-card-note-label">Why this book</div>
             <div className={`book-card-note${display.note ? "" : " empty"}`}>
               {display.note || "No note yet."}
             </div>
 
-            <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
-              <div className="book-card-menu-inner">
-                {displayPinned ? (
-                  <>
-                    <button onClick={() => runAction(onReschedule)}>Change date</button>
+            {hasActions ? (
+              <div ref={menuRef} className={`book-card-menu${menuOpen ? " open" : ""}`}>
+                <div className="book-card-menu-inner">
+                  {displayContext === "current" ? (
+                    <>
+                      <button onClick={() => runAction(onReschedule)}>Change date</button>
+                      <button onClick={() => runAction(onEdit)}>Edit</button>
+                      <button onClick={() => runAction(onFinish)}>Mark finished</button>
+                      <button className="danger" onClick={() => runAction(onUnpin)}>
+                        Unpin
+                      </button>
+                    </>
+                  ) : displayContext === "read" ? (
+                    <>
+                      <button onClick={() => runAction(onEdit)}>Edit</button>
+                      <button className="danger" onClick={() => runAction(onRemove)}>
+                        Delete
+                      </button>
+                    </>
+                  ) : (
                     <button onClick={() => runAction(onEdit)}>Edit</button>
-                    <button onClick={() => runAction(onFinish)}>Mark finished</button>
-                    <button className="danger" onClick={() => runAction(onUnpin)}>
-                      Unpin
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    {!display.read ? (
-                      <button onClick={() => runAction(onPin)}>Pin book</button>
-                    ) : null}
-                    <button onClick={() => runAction(onEdit)}>Edit</button>
-                    <button onClick={() => runAction(onToggleRead)}>
-                      {display.read ? "Mark unread" : "Mark finished"}
-                    </button>
-                    <button className="danger" onClick={() => runAction(onRemove)}>
-                      Delete
-                    </button>
-                  </>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
           </>
         ) : null}
       </div>
     </div>
   );
+}
+
+// One quiet line under the card's buttons: the vote total (only once voting has
+// closed) and how many members have already read the book.
+function cardCaption(votes: number | null, readBefore: number): string {
+  const parts: string[] = [];
+  if (votes !== null) parts.push(votes === 1 ? "1 vote" : `${votes} votes`);
+  if (readBefore > 0)
+    parts.push(
+      readBefore === 1 ? "1 member has already read it" : `${readBefore} members have already read it`,
+    );
+  return parts.join(" · ");
 }

@@ -21,7 +21,7 @@ export default function Hero({ current, book, onOpen }: Props) {
             <br />
             pinned yet
           </div>
-          <div className="hero-empty-sub">Pick a book from the list below.</div>
+          <div className="hero-empty-sub">Vote below to pick the next one.</div>
         </div>
       </div>
     );

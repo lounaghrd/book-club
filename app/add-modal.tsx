@@ -10,6 +10,8 @@ type Props = {
   initialNote?: string;
   onClose: () => void;
   onSubmit: (data: { title: string; author: string; note: string }) => void;
+  // Edit mode only: when set, shows a "Delete my suggestion" link.
+  onDelete?: () => void;
 };
 
 export default function AddModal({
@@ -20,6 +22,7 @@ export default function AddModal({
   initialNote = "",
   onClose,
   onSubmit,
+  onDelete,
 }: Props) {
   const [title, setTitle] = useState(initialTitle);
   const [author, setAuthor] = useState(initialAuthor);
@@ -97,9 +100,14 @@ export default function AddModal({
             Cancel
           </button>
           <button className="btn" onClick={submit}>
-            {mode === "edit" ? "Save" : "Add"}
+            {mode === "edit" ? "Save" : "Suggest"}
           </button>
         </div>
+        {onDelete ? (
+          <button className="vote-advance danger" onClick={onDelete}>
+            Delete my suggestion
+          </button>
+        ) : null}
       </div>
     </div>
   );

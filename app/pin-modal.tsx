@@ -33,7 +33,7 @@ export default function PinModal({ target, onClose, onConfirm }: Props) {
   }
 
   const open = !!target;
-  const titleText = target?.mode === "reschedule" ? "Reschedule" : "Pin as Current";
+  const titleText = target?.mode === "reschedule" ? "Reschedule" : "Start Reading";
   const preview =
     target?.mode === "pin"
       ? `“${target.title}”${target.author ? " · " + target.author : ""}`
