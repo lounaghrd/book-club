@@ -93,6 +93,7 @@ export default function BookClub({
   const [nominations, setNominations] = useState<Nomination[]>(initialNominations);
   const [nomVotes, setNomVotes] = useState<NominationVote[]>(initialNominationVotes);
   const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
+  const [deleteMineOpen, setDeleteMineOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
@@ -700,6 +701,19 @@ export default function BookClub({
 
   async function removeBook(id: string) {
     if (!confirm("Remove this book from the list?")) return;
+    await deleteBookEverywhere(id);
+  }
+
+  // Delete your own suggestion during the suggestions stage. The book row was
+  // created just for it, so it goes too (cascading the nomination); you're back
+  // to "Suggest a book".
+  async function deleteMySuggestion() {
+    setDeleteMineOpen(false);
+    if (!myEntry || session?.status !== "proposing") return;
+    await deleteBookEverywhere(myEntry.book.id);
+  }
+
+  async function deleteBookEverywhere(id: string) {
     const prevBooks = books;
     const prevCurrent = current;
     const prevNoms = nominations;
@@ -819,6 +833,14 @@ export default function BookClub({
         initialNote={editTarget?.note ?? ""}
         onClose={() => setEditTarget(null)}
         onSubmit={editBook}
+        onDelete={
+          session?.status === "proposing" && editTarget && editTarget.id === myEntry?.book.id
+            ? () => {
+                setEditTarget(null);
+                setDeleteMineOpen(true);
+              }
+            : undefined
+        }
       />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
       <ConfirmDialog
@@ -829,6 +851,14 @@ export default function BookClub({
         cancelLabel="Not yet"
         onConfirm={advanceSession}
         onCancel={() => setCloseConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        open={deleteMineOpen}
+        title="Delete your suggestion?"
+        message={myEntry ? `“${myEntry.book.title}” will be removed.` : ""}
+        confirmLabel="Delete"
+        onConfirm={deleteMySuggestion}
+        onCancel={() => setDeleteMineOpen(false)}
       />
       <UserPicker
         open={pickerOpen}

@@ -907,6 +907,9 @@ header {
 .vote-advance:hover {
   color: var(--text);
 }
+.vote-advance.danger {
+  color: var(--accent);
+}
 .vote-section {
   margin-bottom: 40px;
 }
