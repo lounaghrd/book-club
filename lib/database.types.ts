@@ -106,45 +106,6 @@ export interface Database {
         };
         Relationships: [];
       };
-      votes: {
-        Row: {
-          id: string;
-          club_id: string;
-          book_id: string;
-          user_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          club_id: string;
-          book_id: string;
-          user_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          club_id?: string;
-          book_id?: string;
-          user_id?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "votes_book_id_fkey";
-            columns: ["book_id"];
-            isOneToOne: false;
-            referencedRelation: "books";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "votes_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       read_before: {
         Row: {
           id: string;
@@ -177,6 +138,139 @@ export interface Database {
           },
           {
             foreignKeyName: "read_before_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      voting_sessions: {
+        Row: {
+          id: string;
+          club_id: string;
+          status: "open" | "closed" | "done";
+          opened_at: string;
+          closed_at: string | null;
+          winner_book_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          club_id: string;
+          status?: "open" | "closed" | "done";
+          opened_at?: string;
+          closed_at?: string | null;
+          winner_book_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          club_id?: string;
+          status?: "open" | "closed" | "done";
+          opened_at?: string;
+          closed_at?: string | null;
+          winner_book_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "voting_sessions_winner_book_id_fkey";
+            columns: ["winner_book_id"];
+            isOneToOne: false;
+            referencedRelation: "books";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      nominations: {
+        Row: {
+          id: string;
+          club_id: string;
+          session_id: string;
+          book_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          club_id: string;
+          session_id: string;
+          book_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          club_id?: string;
+          session_id?: string;
+          book_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nominations_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "voting_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nominations_book_id_fkey";
+            columns: ["book_id"];
+            isOneToOne: false;
+            referencedRelation: "books";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nominations_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      nomination_votes: {
+        Row: {
+          id: string;
+          club_id: string;
+          session_id: string;
+          nomination_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          club_id: string;
+          session_id: string;
+          nomination_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          club_id?: string;
+          session_id?: string;
+          nomination_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nomination_votes_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "voting_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nomination_votes_nomination_id_fkey";
+            columns: ["nomination_id"];
+            isOneToOne: false;
+            referencedRelation: "nominations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "nomination_votes_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";

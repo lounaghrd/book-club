@@ -2,14 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddModal from "./add-modal";
-import BookCard from "./book-card";
+import BookCard, { type CardContext, type CardVote } from "./book-card";
 import BookList from "./book-list";
 import Hero from "./hero";
 import InstallPrompt from "./install-prompt";
 import PinModal, { type PinTarget } from "./pin-modal";
 import UserPicker from "./user-picker";
+import ConfirmDialog from "./confirm-dialog";
+import Voting, { type Entry } from "./voting";
 import { PlusIcon } from "./icons";
-import type { Book, CurrentReading, Filter, ReadBefore, User, Vote } from "@/lib/types";
+import type {
+  Book,
+  CurrentReading,
+  Nomination,
+  NominationVote,
+  ReadBefore,
+  User,
+  VotingSession,
+} from "@/lib/types";
 import type { Database } from "@/lib/database.types";
 import { createClient } from "@/lib/supabase/client";
 import { CLUB_ID } from "@/lib/config";
@@ -17,28 +27,41 @@ import { CLUB_ID } from "@/lib/config";
 type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
-type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
 type ReadBeforeRow = Database["public"]["Tables"]["read_before"]["Row"];
+type SessionRow = Database["public"]["Tables"]["voting_sessions"]["Row"];
+type NominationRow = Database["public"]["Tables"]["nominations"]["Row"];
+type NominationVoteRow = Database["public"]["Tables"]["nomination_votes"]["Row"];
 import {
   clearCurrent,
   deleteBook,
+  deleteNomination,
+  deleteNominationVote,
   deleteReadBefore,
+  deleteSession,
   deleteUser,
-  deleteVote,
+  fetchActiveSession,
+  fetchNominationVotes,
+  fetchNominations,
   insertBook,
+  insertNomination,
+  insertNominationVote,
   insertReadBefore,
+  insertSession,
   insertUser,
-  insertVote,
   mapBook,
   mapCurrent,
+  mapNomination,
+  mapNominationVote,
   mapReadBefore,
+  mapSession,
   mapUser,
-  mapVote,
   renameUser,
   updateBook,
   updateBookRead,
+  updateSession,
   upsertCurrent,
 } from "@/lib/api";
+import { daysUntil } from "@/lib/format";
 
 const CURRENT_USER_KEY = "bookclub:current_user_id";
 
@@ -46,23 +69,32 @@ type Props = {
   initialBooks: Book[];
   initialCurrent: CurrentReading | null;
   initialUsers: User[];
-  initialVotes: Vote[];
   initialReadBefore: ReadBefore[];
+  initialSession: VotingSession | null;
+  initialNominations: Nomination[];
+  initialNominationVotes: NominationVote[];
 };
+
+// Suggest opening a vote once the meeting is this close (or already past).
+const NUDGE_DAYS = 7;
 
 export default function BookClub({
   initialBooks,
   initialCurrent,
   initialUsers,
-  initialVotes,
   initialReadBefore,
+  initialSession,
+  initialNominations,
+  initialNominationVotes,
 }: Props) {
   const [books, setBooks] = useState<Book[]>(initialBooks);
   const [current, setCurrent] = useState<CurrentReading | null>(initialCurrent);
   const [users, setUsers] = useState<User[]>(initialUsers);
-  const [votes, setVotes] = useState<Vote[]>(initialVotes);
   const [readBefore, setReadBefore] = useState<ReadBefore[]>(initialReadBefore);
-  const [filter, setFilter] = useState<Filter>("available");
+  const [session, setSession] = useState<VotingSession | null>(initialSession);
+  const [nominations, setNominations] = useState<Nomination[]>(initialNominations);
+  const [nomVotes, setNomVotes] = useState<NominationVote[]>(initialNominationVotes);
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);
   const [pinTarget, setPinTarget] = useState<PinTarget | null>(null);
@@ -70,6 +102,9 @@ export default function BookClub({
   // undefined = haven't read localStorage yet (avoids flashing the picker on hydration)
   const [currentUserId, setCurrentUserId] = useState<string | null | undefined>(undefined);
   const [pickerOpen, setPickerOpen] = useState(false);
+  // The nudge depends on today's date; only compute it after mount so server and
+  // client render the same markup.
+  const [mounted, setMounted] = useState(false);
 
   const supabase = useMemo(() => createClient(), []);
 
@@ -84,6 +119,7 @@ export default function BookClub({
     if (stored && !initialUsers.some((u) => u.id === stored)) stored = null;
     setCurrentUserId(stored);
     if (!stored) setPickerOpen(true);
+    setMounted(true);
   }, [initialUsers]);
 
   useEffect(() => {
@@ -152,19 +188,54 @@ export default function BookClub({
           }
         },
       )
-      .on<VoteRow>(
+      .on<SessionRow>(
         "postgres_changes",
-        { event: "*", schema: "public", table: "votes", filter: clubFilter },
+        { event: "*", schema: "public", table: "voting_sessions", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setSession((cur) => (cur?.id === id ? null : cur));
+            return;
+          }
+          // Only the active session is kept; a session going "done" drops out.
+          // The DB allows one active session per club, so an active incoming row
+          // is authoritative.
+          const incoming = mapSession(payload.new);
+          setSession((cur) =>
+            incoming.status === "done" ? (cur?.id === incoming.id ? null : cur) : incoming,
+          );
+        },
+      )
+      .on<NominationRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nominations", filter: clubFilter },
         (payload) => {
           if (payload.eventType === "INSERT") {
-            const incoming = mapVote(payload.new);
-            setVotes((prev) =>
+            const incoming = mapNomination(payload.new);
+            setNominations((prev) =>
+              prev.some((n) => n.id === incoming.id) ? prev : [...prev, incoming],
+            );
+          } else if (payload.eventType === "DELETE") {
+            const id = payload.old.id;
+            if (!id) return;
+            setNominations((prev) => prev.filter((n) => n.id !== id));
+          }
+        },
+      )
+      .on<NominationVoteRow>(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "nomination_votes", filter: clubFilter },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const incoming = mapNominationVote(payload.new);
+            setNomVotes((prev) =>
               prev.some((v) => v.id === incoming.id) ? prev : [...prev, incoming],
             );
           } else if (payload.eventType === "DELETE") {
             const id = payload.old.id;
             if (!id) return;
-            setVotes((prev) => prev.filter((v) => v.id !== id));
+            setNomVotes((prev) => prev.filter((v) => v.id !== id));
           }
         },
       )
@@ -192,26 +263,10 @@ export default function BookClub({
   }, [supabase]);
 
   const currentBook = current ? books.find((b) => b.id === current.bookId) ?? null : null;
-  const listBooks = books.filter((b) => b.id !== current?.bookId);
   const currentUser = currentUserId ? users.find((u) => u.id === currentUserId) ?? null : null;
 
-  // Upvote tallies: a count per book and the set the current user has voted on.
-  // Derived from the flat votes list so realtime echoes flow straight through.
-  const voteCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const v of votes) counts.set(v.bookId, (counts.get(v.bookId) ?? 0) + 1);
-    return counts;
-  }, [votes]);
-  const myVotes = useMemo(() => {
-    const mine = new Set<string>();
-    if (currentUserId) {
-      for (const v of votes) if (v.userId === currentUserId) mine.add(v.bookId);
-    }
-    return mine;
-  }, [votes, currentUserId]);
-
-  // "Already read it" tallies, derived the same way as votes: a count per book and
-  // the set the current user has marked.
+  // "Already read it" tallies, derived from the flat list so realtime echoes flow
+  // straight through: a count per book and the set the current user has marked.
   const readBeforeCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of readBefore) counts.set(r.bookId, (counts.get(r.bookId) ?? 0) + 1);
@@ -224,10 +279,90 @@ export default function BookClub({
     }
     return mine;
   }, [readBefore, currentUserId]);
+
+  // The active session's nominations joined with their book, nominator and vote
+  // tallies. Nominations/votes from other sessions (realtime can deliver them)
+  // are filtered out here rather than at the subscription.
+  const sessionVotes = useMemo(
+    () => (session ? nomVotes.filter((v) => v.sessionId === session.id) : []),
+    [nomVotes, session],
+  );
+  const entries = useMemo<Entry[]>(() => {
+    if (!session) return [];
+    const counts = new Map<string, number>();
+    const mine = new Set<string>();
+    for (const v of sessionVotes) {
+      counts.set(v.nominationId, (counts.get(v.nominationId) ?? 0) + 1);
+      if (v.userId === currentUserId) mine.add(v.nominationId);
+    }
+    const out: Entry[] = [];
+    for (const n of nominations) {
+      if (n.sessionId !== session.id) continue;
+      const book = books.find((b) => b.id === n.bookId);
+      if (!book) continue;
+      out.push({
+        nomination: n,
+        book,
+        nominatorName: users.find((u) => u.id === n.userId)?.name ?? null,
+        votes: counts.get(n.id) ?? 0,
+        voted: mine.has(n.id),
+        readBefore: readBeforeCounts.get(book.id) ?? 0,
+      });
+    }
+    return out.sort((a, b) => a.nomination.createdAt - b.nomination.createdAt);
+  }, [session, sessionVotes, nominations, books, users, currentUserId, readBeforeCounts]);
+  const voterCount = useMemo(
+    () => new Set(sessionVotes.map((v) => v.userId)).size,
+    [sessionVotes],
+  );
+  const myEntry = currentUserId
+    ? entries.find((e) => e.nomination.userId === currentUserId) ?? null
+    : null;
+
+  // Your own earlier suggestions that could be re-nominated: unfinished, not the
+  // current book, and not already in this vote.
+  const pastPicks = useMemo(() => {
+    if (!currentUserId) return [];
+    const nominated = new Set(entries.map((e) => e.book.id));
+    return books
+      .filter(
+        (b) =>
+          b.suggestedByUserId === currentUserId &&
+          !b.read &&
+          b.id !== current?.bookId &&
+          !nominated.has(b.id),
+      )
+      .sort((a, b) => b.addedAt - a.addedAt);
+  }, [books, currentUserId, current, entries]);
+
+  let nudge: string | null = null;
+  if (mounted && !session) {
+    const days = current?.meetingDate ? daysUntil(current.meetingDate) : null;
+    if (!currentBook) nudge = "Time to pick the next book";
+    else if (days !== null && days <= NUDGE_DAYS)
+      nudge =
+        days > 1
+          ? `Meeting in ${days} days — time to vote`
+          : days >= 0
+            ? "Meeting soon — time to vote"
+            : "Time to pick the next book";
+  }
+
   // Derive the open card's book from live state so realtime edits flow through and a
   // deleted book closes the card automatically.
   const cardBook = cardBookId ? books.find((b) => b.id === cardBookId) ?? null : null;
-  const cardIsPinned = !!cardBook && cardBook.id === current?.bookId;
+  const cardEntry = cardBook ? entries.find((e) => e.book.id === cardBook.id) ?? null : null;
+  let cardContext: CardContext = "other";
+  if (cardBook) {
+    if (cardBook.id === current?.bookId) cardContext = "current";
+    else if (cardEntry) cardContext = session?.status === "open" ? "nomination" : "result";
+    else if (cardBook.read) cardContext = "read";
+  }
+  const cardVote = useMemo<CardVote | null>(() => {
+    if (!cardEntry || !session) return null;
+    const open = session.status === "open";
+    return { count: open ? null : cardEntry.votes, voted: cardEntry.voted, canVote: open };
+  }, [cardEntry, session]);
 
   function selectUser(userId: string) {
     setCurrentUserId(userId);
@@ -276,7 +411,13 @@ export default function BookClub({
 
   async function removeUser(userId: string) {
     const prev = users;
+    const prevNoms = nominations;
+    const prevNomVotes = nomVotes;
     setUsers((us) => us.filter((u) => u.id !== userId));
+    // Their nominations and votes cascade-delete in the DB; mirror that locally.
+    const theirNoms = new Set(nominations.filter((n) => n.userId === userId).map((n) => n.id));
+    setNominations((ns) => ns.filter((n) => n.userId !== userId));
+    setNomVotes((vs) => vs.filter((v) => v.userId !== userId && !theirNoms.has(v.nominationId)));
     if (currentUserId === userId) {
       setCurrentUserId(null);
       try {
@@ -290,31 +431,188 @@ export default function BookClub({
     } catch (e) {
       console.error("Failed to delete user", e);
       setUsers(prev);
+      setNominations(prevNoms);
+      setNomVotes(prevNomVotes);
     }
   }
 
-  async function addBook(data: { title: string; author: string; note: string }) {
+  function openNominate() {
     if (!currentUserId) {
       setPickerOpen(true);
       return;
     }
-    const book: Book = {
+    setAddOpen(true);
+  }
+
+  // Put a book forward for the open vote. A member has one nomination per
+  // session, so this swaps out any existing pick (and its votes).
+  async function nominate(pick: { bookId: string } | { title: string; author: string; note: string }) {
+    if (!currentUserId) {
+      setPickerOpen(true);
+      return;
+    }
+    if (!session || session.status !== "open") return;
+    let newBook: Book | null = null;
+    if (!("bookId" in pick)) {
+      newBook = {
+        id: crypto.randomUUID(),
+        title: pick.title,
+        author: pick.author || null,
+        suggestedByUserId: currentUserId,
+        suggestedByName: currentUser?.name ?? null,
+        note: pick.note || null,
+        read: false,
+        addedAt: Date.now(),
+      };
+    }
+    const bookId = newBook ? newBook.id : (pick as { bookId: string }).bookId;
+    const nomination: Nomination = {
       id: crypto.randomUUID(),
-      title: data.title,
-      author: data.author || null,
-      suggestedByUserId: currentUserId,
-      suggestedByName: currentUser?.name ?? null,
-      note: data.note || null,
-      read: false,
-      addedAt: Date.now(),
+      sessionId: session.id,
+      bookId,
+      userId: currentUserId,
+      createdAt: Date.now(),
     };
-    setBooks((prev) => [book, ...prev]);
+    const old = myEntry?.nomination ?? null;
+    const prevBooks = books;
+    const prevNoms = nominations;
+    const prevNomVotes = nomVotes;
+    if (newBook) setBooks((bs) => [newBook, ...bs]);
+    setNominations((ns) => [...ns.filter((n) => n.id !== old?.id), nomination]);
+    if (old) setNomVotes((vs) => vs.filter((v) => v.nominationId !== old.id));
     setAddOpen(false);
     try {
-      await insertBook(supabase, book);
+      if (old) await deleteNomination(supabase, old.id);
+      if (newBook) await insertBook(supabase, newBook);
+      await insertNomination(supabase, nomination);
     } catch (e) {
-      console.error("Failed to add book", e);
-      setBooks((prev) => prev.filter((b) => b.id !== book.id));
+      console.error("Failed to nominate", e);
+      setBooks(prevBooks);
+      setNominations(prevNoms);
+      setNomVotes(prevNomVotes);
+    }
+  }
+
+  async function withdrawNomination(nominationId: string) {
+    const prevNoms = nominations;
+    const prevNomVotes = nomVotes;
+    setNominations((ns) => ns.filter((n) => n.id !== nominationId));
+    setNomVotes((vs) => vs.filter((v) => v.nominationId !== nominationId));
+    try {
+      await deleteNomination(supabase, nominationId);
+    } catch (e) {
+      console.error("Failed to withdraw nomination", e);
+      setNominations(prevNoms);
+      setNomVotes(prevNomVotes);
+    }
+  }
+
+  async function toggleNomVote(nominationId: string) {
+    if (!currentUserId) {
+      setPickerOpen(true);
+      return;
+    }
+    if (!session || session.status !== "open") return;
+    const existing = sessionVotes.find(
+      (v) => v.nominationId === nominationId && v.userId === currentUserId,
+    );
+    const prev = nomVotes;
+    if (existing) {
+      setNomVotes((vs) => vs.filter((v) => v.id !== existing.id));
+      try {
+        await deleteNominationVote(supabase, nominationId, currentUserId);
+      } catch (e) {
+        console.error("Failed to remove vote", e);
+        setNomVotes(prev);
+      }
+    } else {
+      const vote: NominationVote = {
+        id: crypto.randomUUID(),
+        sessionId: session.id,
+        nominationId,
+        userId: currentUserId,
+      };
+      setNomVotes((vs) => [...vs, vote]);
+      try {
+        await insertNominationVote(supabase, vote);
+      } catch (e) {
+        console.error("Failed to add vote", e);
+        setNomVotes((vs) => vs.filter((v) => v.id !== vote.id));
+      }
+    }
+  }
+
+  // Resync the session from the DB after a failed session write — usually a
+  // race where someone else opened/closed it first.
+  async function resyncSession() {
+    try {
+      const fresh = await fetchActiveSession(supabase);
+      setSession(fresh);
+      if (fresh) {
+        const [ns, vs] = await Promise.all([
+          fetchNominations(supabase, fresh.id),
+          fetchNominationVotes(supabase, fresh.id),
+        ]);
+        setNominations(ns);
+        setNomVotes(vs);
+      }
+    } catch (e) {
+      console.error("Failed to resync voting session", e);
+    }
+  }
+
+  async function openVoting() {
+    if (session) return;
+    const next: VotingSession = {
+      id: crypto.randomUUID(),
+      status: "open",
+      openedAt: Date.now(),
+      closedAt: null,
+      winnerBookId: null,
+    };
+    setSession(next);
+    try {
+      await insertSession(supabase, next);
+    } catch (e) {
+      console.error("Failed to open voting", e);
+      await resyncSession();
+    }
+  }
+
+  // Close with nominations → results; close with none → just cancel the session.
+  async function closeVoting() {
+    setCloseConfirmOpen(false);
+    if (!session || session.status !== "open") return;
+    const prev = session;
+    if (entries.length === 0) {
+      setSession(null);
+      try {
+        await deleteSession(supabase, prev.id);
+      } catch (e) {
+        console.error("Failed to cancel voting", e);
+        await resyncSession();
+      }
+      return;
+    }
+    const next: VotingSession = { ...prev, status: "closed", closedAt: Date.now() };
+    setSession(next);
+    try {
+      await updateSession(supabase, next.id, next);
+    } catch (e) {
+      console.error("Failed to close voting", e);
+      await resyncSession();
+    }
+  }
+
+  async function reopenVoting() {
+    if (!session || session.status !== "closed") return;
+    const next: VotingSession = { ...session, status: "open", closedAt: null };
+    setSession(next);
+    try {
+      await updateSession(supabase, next.id, next);
+    } catch (e) {
+      console.error("Failed to reopen voting", e);
+      await resyncSession();
     }
   }
 
@@ -356,11 +654,12 @@ export default function BookClub({
 
   async function confirmPin(date: string) {
     if (!pinTarget) return;
+    if (pinTarget.mode === "pin") {
+      await startBook(pinTarget.bookId, date);
+      return;
+    }
     const prev = current;
-    const next: CurrentReading =
-      pinTarget.mode === "reschedule"
-        ? { bookId: current!.bookId, meetingDate: date }
-        : { bookId: pinTarget.bookId, meetingDate: date };
+    const next: CurrentReading = { bookId: current!.bookId, meetingDate: date };
     setCurrent(next);
     setPinTarget(null);
     try {
@@ -368,6 +667,36 @@ export default function BookClub({
     } catch (e) {
       console.error("Failed to update current reading", e);
       setCurrent(prev);
+    }
+  }
+
+  // Start the vote's winner: it becomes the current reading, the book it replaces
+  // moves to the Read history, and the session is marked done.
+  async function startBook(bookId: string, date: string) {
+    const prevCurrent = current;
+    const prevBooks = books;
+    const prevSession = session;
+    const finishedId = current && current.bookId !== bookId ? current.bookId : null;
+    const next: CurrentReading = { bookId, meetingDate: date };
+    if (finishedId) setBooks((bs) => bs.map((b) => (b.id === finishedId ? { ...b, read: true } : b)));
+    setCurrent(next);
+    setSession(null);
+    setPinTarget(null);
+    try {
+      if (finishedId) await updateBookRead(supabase, finishedId, true);
+      await upsertCurrent(supabase, next);
+      if (prevSession) {
+        await updateSession(supabase, prevSession.id, {
+          status: "done",
+          closedAt: prevSession.closedAt ?? Date.now(),
+          winnerBookId: bookId,
+        });
+      }
+    } catch (e) {
+      console.error("Failed to start the next book", e);
+      setBooks(prevBooks);
+      setCurrent(prevCurrent);
+      setSession(prevSession);
     }
   }
 
@@ -396,46 +725,6 @@ export default function BookClub({
     } catch (e) {
       console.error("Failed to unpin", e);
       setCurrent(prev);
-    }
-  }
-
-  async function toggleRead(id: string) {
-    const book = books.find((b) => b.id === id);
-    if (!book) return;
-    const next = !book.read;
-    setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, read: next } : b)));
-    try {
-      await updateBookRead(supabase, id, next);
-    } catch (e) {
-      console.error("Failed to toggle read", e);
-      setBooks((bs) => bs.map((b) => (b.id === id ? { ...b, read: !next } : b)));
-    }
-  }
-
-  async function toggleVote(id: string) {
-    if (!currentUserId) {
-      setPickerOpen(true);
-      return;
-    }
-    const existing = votes.find((v) => v.bookId === id && v.userId === currentUserId);
-    const prevVotes = votes;
-    if (existing) {
-      setVotes((vs) => vs.filter((v) => v.id !== existing.id));
-      try {
-        await deleteVote(supabase, id, currentUserId);
-      } catch (e) {
-        console.error("Failed to remove vote", e);
-        setVotes(prevVotes);
-      }
-    } else {
-      const vote: Vote = { id: crypto.randomUUID(), bookId: id, userId: currentUserId };
-      setVotes((vs) => [...vs, vote]);
-      try {
-        await insertVote(supabase, vote);
-      } catch (e) {
-        console.error("Failed to add vote", e);
-        setVotes((vs) => vs.filter((v) => v.id !== vote.id));
-      }
     }
   }
 
@@ -470,12 +759,15 @@ export default function BookClub({
     if (!confirm("Remove this book from the list?")) return;
     const prevBooks = books;
     const prevCurrent = current;
-    const prevVotes = votes;
+    const prevNoms = nominations;
+    const prevNomVotes = nomVotes;
     const prevReadBefore = readBefore;
     setBooks((bs) => bs.filter((b) => b.id !== id));
-    // Votes and read-before marks cascade-delete in the DB; drop them locally too
-    // so the counts don't linger.
-    setVotes((vs) => vs.filter((v) => v.bookId !== id));
+    // Nominations (and their votes) and read-before marks cascade-delete in the
+    // DB; drop them locally too so the counts don't linger.
+    const bookNoms = new Set(nominations.filter((n) => n.bookId === id).map((n) => n.id));
+    setNominations((ns) => ns.filter((n) => n.bookId !== id));
+    setNomVotes((vs) => vs.filter((v) => !bookNoms.has(v.nominationId)));
     setReadBefore((rs) => rs.filter((r) => r.bookId !== id));
     if (current?.bookId === id) setCurrent(null);
     try {
@@ -484,7 +776,8 @@ export default function BookClub({
       console.error("Failed to remove book", e);
       setBooks(prevBooks);
       setCurrent(prevCurrent);
-      setVotes(prevVotes);
+      setNominations(prevNoms);
+      setNomVotes(prevNomVotes);
       setReadBefore(prevReadBefore);
     }
   }
@@ -525,43 +818,58 @@ export default function BookClub({
           onOpen={() => currentBook && setCardBookId(currentBook.id)}
         />
 
-        <BookList
-          books={listBooks}
-          filter={filter}
-          onFilter={setFilter}
-          onOpen={setCardBookId}
-          voteCounts={voteCounts}
-          myVotes={myVotes}
-          onVote={toggleVote}
-          readBeforeCounts={readBeforeCounts}
+        <Voting
+          session={session}
+          entries={entries}
+          voterCount={voterCount}
+          myEntry={myEntry}
+          hasUser={!!currentUserId}
+          nudge={nudge}
+          onOpenVoting={openVoting}
+          onOpenCard={setCardBookId}
+          onVote={toggleNomVote}
+          onClose={() => setCloseConfirmOpen(true)}
+          onReopen={reopenVoting}
+          onStart={openPin}
         />
+
+        <BookList books={books} onOpen={setCardBookId} />
       </div>
 
-      <button className="fab" onClick={() => setAddOpen(true)}>
-        <PlusIcon />
-        Suggest a book
-      </button>
+      {session?.status === "open" ? (
+        <button className="fab" onClick={openNominate}>
+          <PlusIcon />
+          {myEntry ? "Change my pick" : "Nominate a book"}
+        </button>
+      ) : null}
 
       <BookCard
         book={cardBook}
-        isPinned={cardIsPinned}
-        voteCount={cardBook ? voteCounts.get(cardBook.id) ?? 0 : 0}
-        hasVoted={cardBook ? myVotes.has(cardBook.id) : false}
-        onVote={() => cardBook && toggleVote(cardBook.id)}
+        context={cardContext}
+        vote={cardVote}
+        onVote={() => cardEntry && toggleNomVote(cardEntry.nomination.id)}
         readBeforeCount={cardBook ? readBeforeCounts.get(cardBook.id) ?? 0 : 0}
         hasReadBefore={cardBook ? myReadBefore.has(cardBook.id) : false}
         onReadBefore={() => cardBook && toggleReadBefore(cardBook.id)}
         onClose={() => setCardBookId(null)}
-        onPin={() => cardBook && runCardAction(() => openPin(cardBook.id))}
         onReschedule={() => runCardAction(openReschedule)}
         onEdit={() => cardBook && runCardAction(() => openEdit(cardBook.id))}
         onFinish={() => runCardAction(finishCurrent)}
-        onToggleRead={() => cardBook && runCardAction(() => toggleRead(cardBook.id))}
         onUnpin={() => runCardAction(unpin)}
+        onWithdraw={() =>
+          cardEntry && runCardAction(() => withdrawNomination(cardEntry.nomination.id))
+        }
         onRemove={() => cardBook && runCardAction(() => removeBook(cardBook.id))}
       />
 
-      <AddModal open={addOpen} onClose={() => setAddOpen(false)} onSubmit={addBook} />
+      <AddModal
+        open={addOpen}
+        pastPicks={pastPicks}
+        replacing={myEntry?.book.title ?? null}
+        onPickPast={(bookId) => nominate({ bookId })}
+        onClose={() => setAddOpen(false)}
+        onSubmit={nominate}
+      />
       <AddModal
         open={!!editTarget}
         mode="edit"
@@ -572,6 +880,19 @@ export default function BookClub({
         onSubmit={editBook}
       />
       <PinModal target={pinTarget} onClose={() => setPinTarget(null)} onConfirm={confirmPin} />
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        title={entries.length === 0 ? "Cancel voting?" : "Close voting?"}
+        message={
+          entries.length === 0
+            ? "Nobody has nominated a book yet. This cancels the vote; you can open a new one any time."
+            : "Nominations and votes will be locked and everyone will see the results. You can reopen it if needed."
+        }
+        confirmLabel={entries.length === 0 ? "Cancel voting" : "Close voting"}
+        cancelLabel="Not yet"
+        onConfirm={closeVoting}
+        onCancel={() => setCloseConfirmOpen(false)}
+      />
       <UserPicker
         open={pickerOpen}
         users={users}

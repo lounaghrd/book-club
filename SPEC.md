@@ -1,6 +1,6 @@
 # Book Club — Build Spec
 
-A mobile-first web app for a small book club. Anyone with the link can suggest books, pin one as the current reading, and schedule the next meeting. No real accounts — instead, a lightweight "pick your name" identity layer attributes each suggestion to a person (see Access model below).
+A mobile-first web app for a small book club. Anyone with the link can run a vote to pick the next book, and schedule the next meeting. No real accounts — instead, a lightweight "pick your name" identity layer attributes each suggestion to a person (see Access model below).
 
 **Visual & interaction reference: `book-club.html`** — open it in a browser. The prototype defines the full UI, states, copy, and design tokens. Treat it as the spec for anything not covered here.
 
@@ -9,12 +9,12 @@ A mobile-first web app for a small book club. Anyone with the link can suggest b
 ## Core features
 
 1. **Currently reading** — pinned at top of the page. Shows title, author, days-until-meeting countdown, and meeting date. Tapping it opens the book card (below), which holds the actions.
-2. **Reading list** — anyone can suggest a book (title + optional author + optional note on why). Suggestions auto-attribute to the current user (see Identity). Each row shows title/author/suggester, an upvote pill, and expands into the book card. "Up next" is ranked by upvote count, with the "already read it" count as a tie-break (fewer readers first).
-3. **Book card** — a bottom-sheet detail view, opened from a list row or the currently-reading hero. Shows title, author, who suggested it, and their note. A kebab (⋮) in the card holds the actions, which depend on context: pinned book → change date, edit, mark finished, unpin; list book → pin as current, edit (title/author/note), mark read/unread, remove.
-4. **Two filters** — "Up next" (unread, default) and "Read".
+2. **Voting sessions ("Next book")** — replaced the original always-on reading list. When the current book is nearly done, anyone opens a vote (the app nudges when the meeting is ≤ 7 days away). While it's open, every member nominates exactly one book — new (title + optional author + optional note on why) or one of their own past suggestions — and can change it. Everyone upvotes as many nominations as they like; tallies stay hidden until someone closes the vote. Results rank by votes, then fewer "already read it" marks, and the group starts the winner (picking a meeting date), which finishes the previous book. Each session starts from scratch: a book only competes if someone re-nominates it.
+3. **Book card** — a bottom-sheet detail view, opened from the hero, a nomination, a result, or the Read history. Shows title, author, who suggested it, their note, and (for nominations) a vote pill. A kebab (⋮) holds context-dependent actions: current book → change date, edit, mark finished, unpin; nomination → edit, withdraw; read book → edit, delete.
+4. **Read history** — finished books, newest first.
 5. **Identity ("who's reading")** — on first visit a blocking picker asks the visitor to choose their name from a shared list or add a new one; the choice is persisted locally and shown as a header chip that re-opens the picker so anyone can switch. Users can be renamed or removed (rename updates the name everywhere; removal keeps a person's past suggestions, frozen under their last name). Attribution only — not a security boundary.
-6. **Upvotes** — anyone can upvote a book on the reading list to signal "I'd read this" (upvote-only, no downvotes). One vote per picked user per book; tapping again removes it. The "Up next" filter ranks by upvote count. Like identity, this is soft dedup, not a security boundary.
-7. **"Already read it"** — inside the book card, a member can mark that they've *already read* a book before (separate from the club-wide finished flag). It shows a count of how many members have read it, so the group can avoid picking something most people already know. It doesn't block pinning, but it acts as a tie-break in the "Up next" ranking: among books with equal upvotes, the one fewer members have already read sorts higher. One marker per picked user per book; same soft dedup as upvotes.
+6. **Votes** — upvote-only, one per picked user per nomination, as many nominations as you like. Soft dedup, not a security boundary. (Originally always-on upvotes on the reading list; replaced by voting sessions.)
+7. **"Already read it"** — inside the book card, a member can mark that they've *already read* a book before (separate from the club-wide finished flag). It shows a count of how many members have read it, so the group can avoid picking something most people already know. It's the first tie-break in vote results: among nominations with equal votes, the one fewer members have already read wins. One marker per picked user per book; same soft dedup as votes.
 
 Out of scope for v1: ~~voting~~ (added after v1 as upvotes — see feature 6), meeting links/locations, threaded discussion/comments, notifications, real authentication. (A single suggester's "why" note per book is in scope — see the book card — but threaded discussion is not.)
 
@@ -45,13 +45,34 @@ User {
   createdAt: timestamp
 }
 
-Vote {
+VotingSession {
   id: string           // uuid
+  status: "open" | "closed" | "done"
+  openedAt: timestamp
+  closedAt?: timestamp
+  winnerBookId?: string // FK to Book, set when the winner is started
+  // at most one non-done session per club
+}
+
+Nomination {
+  id: string           // uuid
+  sessionId: string    // FK to VotingSession (cascade delete)
   bookId: string       // FK to Book (cascade delete)
   userId: string       // FK to User (cascade delete)
   createdAt: timestamp
-  // unique (bookId, userId) — one upvote per user per book
+  // unique (sessionId, userId) — one nomination per member per session
+  // unique (sessionId, bookId)
 }
+
+NominationVote {
+  id: string           // uuid
+  sessionId: string    // FK to VotingSession (cascade delete)
+  nominationId: string // FK to Nomination (cascade delete)
+  userId: string       // FK to User (cascade delete)
+  // unique (nominationId, userId) — one upvote per member per nomination
+}
+
+// Legacy: Vote { bookId, userId } — the old always-on upvotes table, no longer used.
 
 ReadBefore {
   id: string           // uuid
@@ -72,7 +93,7 @@ A book keeps both a foreign key to its suggester (`suggestedByUserId`) and a `su
 ## Recommended stack
 
 - **Frontend**: Next.js 15 (App Router) or Vite + React — your choice. The prototype is plain HTML/JS so port is straightforward either way.
-- **Backend**: Supabase. Five tables (`books`, `current_reading`, `users`, `votes`, `read_before`) + Realtime subscriptions so everyone sees updates without refreshing. You already know the setup from Españolo.
+- **Backend**: Supabase. Tables `books`, `current_reading`, `users`, `read_before`, `voting_sessions`, `nominations`, `nomination_votes` (plus the legacy, unused `votes`) + Realtime subscriptions so everyone sees updates without refreshing. You already know the setup from Españolo.
 - **Styling**: port the CSS from the prototype directly. All tokens are CSS variables at the top of `book-club.html` (`:root`). Tailwind is fine too if you prefer — the design uses a small token set.
 - **Font**: Bricolage Grotesque via Google Fonts (already linked in the prototype).
 - **Hosting**: Vercel.

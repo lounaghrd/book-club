@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { Book } from "@/lib/types";
 
 type Props = {
   open: boolean;
@@ -8,6 +9,11 @@ type Props = {
   initialTitle?: string;
   initialAuthor?: string;
   initialNote?: string;
+  // Add mode only: the member's own earlier suggestions they can re-nominate in
+  // one tap, and the title of the pick a new nomination would replace.
+  pastPicks?: Book[];
+  replacing?: string | null;
+  onPickPast?: (bookId: string) => void;
   onClose: () => void;
   onSubmit: (data: { title: string; author: string; note: string }) => void;
 };
@@ -18,6 +24,9 @@ export default function AddModal({
   initialTitle = "",
   initialAuthor = "",
   initialNote = "",
+  pastPicks = [],
+  replacing = null,
+  onPickPast,
   onClose,
   onSubmit,
 }: Props) {
@@ -26,15 +35,19 @@ export default function AddModal({
   const [note, setNote] = useState(initialNote);
   const titleRef = useRef<HTMLInputElement>(null);
 
+  // With past picks on offer, don't autofocus: on phones the keyboard would cover them.
+  const hasPastPicks = mode === "add" && pastPicks.length > 0;
+
   useEffect(() => {
     if (open) {
       setTitle(initialTitle);
       setAuthor(initialAuthor);
       setNote(initialNote);
+      if (hasPastPicks) return;
       const t = setTimeout(() => titleRef.current?.focus(), 280);
       return () => clearTimeout(t);
     }
-  }, [open, initialTitle, initialAuthor, initialNote]);
+  }, [open, initialTitle, initialAuthor, initialNote, hasPastPicks]);
 
   function submit() {
     const t = title.trim();
@@ -59,7 +72,27 @@ export default function AddModal({
     >
       <div className="modal">
         <div className="modal-handle" />
-        <div className="modal-title">{mode === "edit" ? "Edit Book" : "Suggest a Book"}</div>
+        <div className="modal-title">{mode === "edit" ? "Edit Book" : "Nominate a Book"}</div>
+        {mode === "add" ? (
+          <div className="modal-subtext">
+            {replacing
+              ? `This replaces your current pick, “${replacing}”, and any votes it had.`
+              : "One book per person. Pick something new, or bring back a past suggestion."}
+          </div>
+        ) : null}
+        {hasPastPicks ? (
+          <div className="field">
+            <label>Your past suggestions</label>
+            <div className="past-picks">
+              {pastPicks.map((b) => (
+                <button key={b.id} className="past-pick" onClick={() => onPickPast?.(b.id)}>
+                  <span className="past-pick-title">{b.title}</span>
+                  {b.author ? <span className="past-pick-author">{b.author}</span> : null}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="field">
           <label>Title</label>
           <input
@@ -97,7 +130,7 @@ export default function AddModal({
             Cancel
           </button>
           <button className="btn" onClick={submit}>
-            {mode === "edit" ? "Save" : "Add"}
+            {mode === "edit" ? "Save" : "Nominate"}
           </button>
         </div>
       </div>

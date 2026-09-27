@@ -829,6 +829,134 @@ header {
   color: var(--accent);
 }
 
+/* Voting session ("Next book"). Idle and winner states reuse the hero's surface
+   panel; the open state and results reuse the book-list rows. */
+.vote-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 22px 22px 24px;
+  margin-bottom: 40px;
+}
+.vote-panel.nudge,
+.vote-panel.winner {
+  border-color: var(--accent);
+}
+.vote-panel.winner {
+  margin-bottom: 20px;
+}
+.vote-panel-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 85;
+  line-height: 1.05;
+  word-break: break-word;
+}
+.vote-panel-author {
+  font-size: 15px;
+  color: var(--text-soft);
+  margin-top: 6px;
+}
+.vote-panel-sub {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-soft);
+  margin: 10px 0 18px;
+}
+.winner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.vote-section {
+  margin-bottom: 40px;
+}
+.vote-live {
+  color: var(--accent);
+}
+.vote-stats {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.vote-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 16px;
+  word-break: break-word;
+}
+.vote-status.pending {
+  color: var(--accent);
+}
+.vote-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+.rank {
+  width: 18px;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Read-only tally (results): same pill shape, no interaction. */
+.vote-btn.static {
+  cursor: default;
+}
+.vote-btn.static:active {
+  transform: none;
+}
+.vote-btn.static:hover {
+  border-color: var(--border);
+  color: var(--text-soft);
+}
+.vote-btn.static.voted:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+/* Nominate sheet: one-tap re-nominate of your earlier suggestions. */
+.past-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.past-pick {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color 0.12s;
+}
+.past-pick:hover {
+  border-color: var(--accent);
+}
+.past-pick:active {
+  transform: scale(0.99);
+}
+.past-pick-title {
+  font-size: 15px;
+  font-weight: 600;
+  word-break: break-word;
+}
+.past-pick-author {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
 .hero-clickable,
 .book-clickable {
   cursor: pointer;

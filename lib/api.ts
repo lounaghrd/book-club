@@ -1,6 +1,14 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { Database } from "@/lib/database.types";
-import type { Book, CurrentReading, ReadBefore, User, Vote } from "@/lib/types";
+import type {
+  Book,
+  CurrentReading,
+  Nomination,
+  NominationVote,
+  ReadBefore,
+  User,
+  VotingSession,
+} from "@/lib/types";
 import { CLUB_ID } from "@/lib/config";
 
 // @supabase/ssr bundles its own SupabaseClient — derive DB from its factory so both
@@ -9,8 +17,10 @@ type DB = ReturnType<typeof createBrowserClient<Database>>;
 type BookRow = Database["public"]["Tables"]["books"]["Row"];
 type CurrentRow = Database["public"]["Tables"]["current_reading"]["Row"];
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
-type VoteRow = Database["public"]["Tables"]["votes"]["Row"];
 type ReadBeforeRow = Database["public"]["Tables"]["read_before"]["Row"];
+type SessionRow = Database["public"]["Tables"]["voting_sessions"]["Row"];
+type NominationRow = Database["public"]["Tables"]["nominations"]["Row"];
+type NominationVoteRow = Database["public"]["Tables"]["nomination_votes"]["Row"];
 
 export function mapBook(row: BookRow): Book {
   return {
@@ -37,8 +47,33 @@ export function mapUser(row: UserRow): User {
   };
 }
 
-export function mapVote(row: VoteRow): Vote {
-  return { id: row.id, bookId: row.book_id, userId: row.user_id };
+export function mapSession(row: SessionRow): VotingSession {
+  return {
+    id: row.id,
+    status: row.status,
+    openedAt: new Date(row.opened_at).getTime(),
+    closedAt: row.closed_at ? new Date(row.closed_at).getTime() : null,
+    winnerBookId: row.winner_book_id,
+  };
+}
+
+export function mapNomination(row: NominationRow): Nomination {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    bookId: row.book_id,
+    userId: row.user_id,
+    createdAt: new Date(row.created_at).getTime(),
+  };
+}
+
+export function mapNominationVote(row: NominationVoteRow): NominationVote {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    nominationId: row.nomination_id,
+    userId: row.user_id,
+  };
 }
 
 export function mapReadBefore(row: ReadBeforeRow): ReadBefore {
@@ -75,27 +110,105 @@ export async function fetchUsers(db: DB): Promise<User[]> {
   return (data ?? []).map(mapUser);
 }
 
-export async function fetchVotes(db: DB): Promise<Vote[]> {
-  const { data, error } = await db.from("votes").select("*").eq("club_id", CLUB_ID);
+// The club's active (open or closed-awaiting-start) session, if any. Done sessions
+// are history and aren't loaded; the DB allows at most one active per club.
+export async function fetchActiveSession(db: DB): Promise<VotingSession | null> {
+  const { data, error } = await db
+    .from("voting_sessions")
+    .select("*")
+    .eq("club_id", CLUB_ID)
+    .neq("status", "done")
+    .order("opened_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (error) throw error;
-  return (data ?? []).map(mapVote);
+  return data ? mapSession(data) : null;
 }
 
-export async function insertVote(db: DB, vote: Vote): Promise<void> {
-  const { error } = await db.from("votes").insert({
+export async function insertSession(db: DB, session: VotingSession): Promise<void> {
+  const { error } = await db.from("voting_sessions").insert({
+    id: session.id,
+    club_id: CLUB_ID,
+    status: session.status,
+    opened_at: new Date(session.openedAt).toISOString(),
+  });
+  if (error) throw error;
+}
+
+export async function updateSession(
+  db: DB,
+  id: string,
+  fields: Pick<VotingSession, "status" | "closedAt" | "winnerBookId">,
+): Promise<void> {
+  const { error } = await db
+    .from("voting_sessions")
+    .update({
+      status: fields.status,
+      closed_at: fields.closedAt ? new Date(fields.closedAt).toISOString() : null,
+      winner_book_id: fields.winnerBookId,
+    })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteSession(db: DB, id: string): Promise<void> {
+  const { error } = await db.from("voting_sessions").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function fetchNominations(db: DB, sessionId: string): Promise<Nomination[]> {
+  const { data, error } = await db
+    .from("nominations")
+    .select("*")
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapNomination);
+}
+
+export async function insertNomination(db: DB, nomination: Nomination): Promise<void> {
+  const { error } = await db.from("nominations").insert({
+    id: nomination.id,
+    club_id: CLUB_ID,
+    session_id: nomination.sessionId,
+    book_id: nomination.bookId,
+    user_id: nomination.userId,
+    created_at: new Date(nomination.createdAt).toISOString(),
+  });
+  if (error) throw error;
+}
+
+export async function deleteNomination(db: DB, id: string): Promise<void> {
+  const { error } = await db.from("nominations").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function fetchNominationVotes(db: DB, sessionId: string): Promise<NominationVote[]> {
+  const { data, error } = await db.from("nomination_votes").select("*").eq("session_id", sessionId);
+  if (error) throw error;
+  return (data ?? []).map(mapNominationVote);
+}
+
+export async function insertNominationVote(db: DB, vote: NominationVote): Promise<void> {
+  const { error } = await db.from("nomination_votes").insert({
     id: vote.id,
     club_id: CLUB_ID,
-    book_id: vote.bookId,
+    session_id: vote.sessionId,
+    nomination_id: vote.nominationId,
     user_id: vote.userId,
   });
   if (error) throw error;
 }
 
-export async function deleteVote(db: DB, bookId: string, userId: string): Promise<void> {
+export async function deleteNominationVote(
+  db: DB,
+  nominationId: string,
+  userId: string,
+): Promise<void> {
   const { error } = await db
-    .from("votes")
+    .from("nomination_votes")
     .delete()
-    .eq("book_id", bookId)
+    .eq("nomination_id", nominationId)
     .eq("user_id", userId);
   if (error) throw error;
 }
