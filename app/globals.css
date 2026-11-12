@@ -930,15 +930,6 @@ header {
   cursor: pointer;
   flex-shrink: 0;
 }
-.vote-count-line {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  margin-top: 18px;
-}
-.vote-count-line + .vote-advance {
-  margin-top: 4px;
-}
 
 /* Quiet text button that moves the session to its next stage. */
 .vote-advance {
