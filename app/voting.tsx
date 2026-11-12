@@ -62,33 +62,28 @@ function Idle({ nudge, onOpen }: Props) {
   );
 }
 
-// Stage 1: everyone adds one book. Other people's suggestions stay hidden —
-// only the count shows. Before you've suggested, the panel is a call to action;
-// after, it's a "done" state so it's clear there's nothing left to do until
-// voting opens.
-function Proposing({ entries, myEntry, onSuggest, onEditMine, onAdvance }: Props) {
+// Stage 1: everyone adds one book. Suggestions are visible to everyone as
+// they come in (alphabetical, tap for the card). Before you've suggested, the
+// panel is a call to action; after, it's a "done" state so it's clear there's
+// nothing left to do until voting opens.
+function Proposing({ entries, myEntry, onSuggest, onEditMine, onOpenCard, onAdvance }: Props) {
   const n = entries.length;
-  const count = `${n} ${n === 1 ? "suggestion" : "suggestions"}`;
+  const sorted = [...entries].sort((a, b) => a.book.title.localeCompare(b.book.title));
   const advance = (
     <button className="vote-advance" onClick={onAdvance}>
       {n === 0 ? "Cancel" : "Close suggestions & start voting"}
     </button>
   );
 
-  if (!myEntry) {
-    return (
-      <div className="vote-panel">
-        <div className="hero-label">Next book · Suggestions</div>
-        <div className="vote-panel-title">{count}</div>
-        <button className="btn btn-block btn-danger" onClick={onSuggest}>
-          Suggest a book
-        </button>
-        {advance}
-      </div>
-    );
-  }
-
-  return (
+  const panel = !myEntry ? (
+    <div className="vote-panel">
+      <div className="hero-label">Next book · Suggestions</div>
+      <button className="btn btn-block btn-danger" onClick={onSuggest}>
+        Suggest a book
+      </button>
+      {advance}
+    </div>
+  ) : (
     <div className="vote-panel done">
       <div className="hero-label">Next book · Suggestions</div>
       <div className="vote-done">
@@ -109,9 +104,32 @@ function Proposing({ entries, myEntry, onSuggest, onEditMine, onAdvance }: Props
           Edit
         </button>
       </div>
-      <div className="vote-count-line">{count} so far</div>
       {advance}
     </div>
+  );
+
+  return (
+    <>
+      {panel}
+      {n > 0 ? (
+        <section className="vote-section">
+          <div className="section-header">
+            <div className="section-title">Suggestions</div>
+            <div className="section-count">{n}</div>
+          </div>
+          <div className="book-list">
+            {sorted.map((e) => (
+              <div key={e.nomination.id} className="book book-clickable" onClick={() => onOpenCard(e.book.id)}>
+                <div className="book-info">
+                  <div className="book-title">{e.book.title}</div>
+                  {e.book.author ? <div className="book-author">{e.book.author}</div> : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+    </>
   );
 }
 
